@@ -60,13 +60,13 @@ timing:
 
 ### 3. Call Buffer
 ```graphql
-mutation {
+mutation CreatePost($text: String!, $channelId: ChannelId!, $dueAt: DateTime!) {
   createPost(input: {
-    text: "<post text + hashtags>"
-    channelId: "<BUFFER_CHANNEL_ID>"
+    text: $text
+    channelId: $channelId
     schedulingType: automatic
     mode: customScheduled
-    dueAt: "<ISO 8601 UTC timestamp>"
+    dueAt: $dueAt
   }) {
     ... on PostActionSuccess { post { id text dueAt } }
     ... on MutationError { message }
@@ -78,9 +78,16 @@ that draft, report the exact error message, and do not write a Scheduled
 Note for it.** Never fabricate a `buffer_post_id`. This is also a
 notification trigger (Phase 11: "a post fails to publish").
 
-Note: field names/shape were verified against Buffer's current docs but
-not yet exercised against a live account — if the real API rejects this
-shape, report the exact error back rather than guessing a fix silently.
+Note: verified live against Buffer's API on 2026-09-09 (first real call
+from this pipeline — see `Scheduled/2026-09-16--crewai-crews-vs-flows.md`
+for the full record). One correction was needed and is now baked into the
+mutation above: `channelId` is the custom scalar `ChannelId!`, not
+`String!` as the docs-only draft of this skill assumed — the live schema
+rejected `String!` with `GRAPHQL_VALIDATION_FAILED`, and the fix was
+applied based on that exact error message, not guessed. The rest of the
+shape (mutation name, `PostActionSuccess`/`MutationError` union,
+`schedulingType`/`mode`/`dueAt` fields) worked as documented on the first
+successful call.
 
 ### 4. On success
 - Write a Scheduled Note in `Scheduled/` from

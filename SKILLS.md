@@ -156,7 +156,7 @@ Status legend: ✅ done · 🚧 in progress · ⬜ not started
   until Phase 8.
 
 ## Phase 8 — Scheduler Agent + Buffer integration
-🚧 Built, still never exercised against a live account
+✅ Done — verified against a real, live Buffer account (2026-09-09)
 
 - New skill: `.claude/skills/schedule-approved/SKILL.md`
   (`/schedule-approved [draft-id]`). Built against Buffer's **current
@@ -167,18 +167,26 @@ Status legend: ✅ done · 🚧 in progress · ⬜ not started
   fabricates a `buffer_post_id` on failure.
 - Sends `PushNotification`s on queue-depth drop and publish failure
   (Phase 11 wiring).
-- **Credentials are no longer the blocker** (correction, 2026-09-09): the
-  original "blocked on real credentials" note below is stale — `.env` now
-  has real `BUFFER_ACCESS_TOKEN`/`BUFFER_CHANNEL_ID` values. **The actual
-  current gap: no live Buffer call has ever been made.** The GraphQL shape
-  is verified against docs only, not against a real response. This phase
-  isn't "done" until a real, user-approved dry run against Buffer
-  succeeds — treat it as built-but-untested, not working.
-  <details><summary>Original Phase 8 note (kept for the record)</summary>
-  Checked the user's `.env` at the time — it had only an empty `BUFFER`
-  key, not the pair this skill requires; the skill correctly refused to
-  run without them (verified: both reported "NOT FOUND").
-  </details>
+- **Real, live validation run (2026-09-09)**: with the user's explicit
+  go-ahead, scheduled the real approved CrewAI draft
+  (`Drafts/2026-09-16--crewai-crews-vs-flows.md`) via a genuine
+  `createPost` call. First attempt failed with a real
+  `GRAPHQL_VALIDATION_FAILED` error — the docs-derived mutation declared
+  `channelId: String!`, but Buffer's live schema requires the custom
+  scalar `channelId: ChannelId!`. Fixed based on that exact error message
+  (not guessed) and retried once, which succeeded:
+  `buffer_post_id: 6aa1026da821ff5ff7114840`, `dueAt: 2026-09-16T03:30:00Z`.
+  `schedule-approved/SKILL.md` corrected to match. Full record in
+  `Scheduled/2026-09-16--crewai-crews-vs-flows.md`. This is now the first
+  genuinely working phase in this system that touches a real external
+  service, not just a docs-verified design.
+- Also surfaced (and logged, not silently fixed away): the draft's
+  Reviewer Notes had claimed 1,451 characters; the actual text transmitted
+  to Buffer measured 1,502. Recorded the real measured value on the
+  Scheduled Note.
+- Credentials were previously the documented blocker; they no longer are
+  (`.env` now has real `BUFFER_ACCESS_TOKEN`/`BUFFER_CHANNEL_ID` values) —
+  see DECISIONS.md for that correction.
 
 ## Phase 9 — Analytics Agent
 🚧 Built, still never exercised against a live account

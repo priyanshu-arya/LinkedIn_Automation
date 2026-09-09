@@ -350,8 +350,8 @@ Run `python3 scripts/validate_vault.py` to check every note in `Content-Research
 - [x] **Phase 5:** Critic Agent & Viral Potential Scoring Gate
 - [x] **Phase 6:** Visual Design & Infographic Brief Generator
 - [x] **Phase 7:** Interactive Human Approval CLI
-- [~] **Phase 8:** Buffer GraphQL Scheduler & Queue Manager — *built against Buffer's documented API shape, but never exercised against a live account yet*
-- [~] **Phase 9:** Analytics Ingestion & Performance Tracking — *same live-account caveat as Phase 8*
+- [x] **Phase 8:** Buffer GraphQL Scheduler & Queue Manager — *verified against a real, live Buffer account on 2026-09-09; one real API-shape correction made and documented*
+- [~] **Phase 9:** Analytics Ingestion & Performance Tracking — *built against Buffer's documented API shape, not yet exercised against a live account*
 - [x] **Phase 10:** Closed-Loop Growth Agent & Content Playbook Evolution
 - [x] **Phase 11:** Proactive Event Notifications (Queue depth, viral posts)
 - [x] **Phase 12:** Cost & Safety Hardening Audit (`COST-AND-SAFETY.md`)

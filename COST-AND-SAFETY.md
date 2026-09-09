@@ -48,14 +48,13 @@ anything real. Revisit when/if a scheduled automation phase is built.
 
 - Image generation has no real provider wired in (Phase 6, by explicit
   choice) — briefs only.
-- Buffer integration (Phase 8/9) is built and verified against Buffer's
-  current documented API shape, but **has never been exercised against a
-  live account**. `.env` now has real `BUFFER_ACCESS_TOKEN`/
-  `BUFFER_CHANNEL_ID` values (as of 2026-09-09, correcting an earlier
-  version of this note) — the remaining gap is purely "never tested live,"
-  not missing credentials. A deliberate, user-approved dry run against a
-  real approved draft is still needed before either skill can be trusted.
-  See DECISIONS.md.
+- Buffer **scheduling** (Phase 8) is now verified against a real, live
+  account (2026-09-09, user-approved) — see DECISIONS.md and
+  `Scheduled/2026-09-16--crewai-crews-vs-flows.md`. One real API-shape
+  correction (`channelId`'s GraphQL type) was found and fixed based on the
+  live error message. Buffer **analytics** (Phase 9, `/pull-analytics`)
+  is still untested against a live account — nothing has been scheduled
+  long enough to have metrics to pull yet.
 - A live-content pipeline that fetches arbitrary web pages (`research-topic`
   via `WebFetch`/`WebSearch`) and eventually reaches a real external API
   (`schedule-approved` → Buffer) has a prompt-injection surface: a crafted

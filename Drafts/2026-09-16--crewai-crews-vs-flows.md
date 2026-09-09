@@ -13,7 +13,7 @@ sources:
 viral_score: 7.25
 status: approved
 preferred_time: ""
-scheduled_id: ""
+scheduled_id: "2026-09-16--crewai-crews-vs-flows"
 history:
   - action: created
     date: 2026-09-09
@@ -24,6 +24,9 @@ history:
   - action: approved
     date: 2026-09-09
     note: "Approved by user via /review-drafts, no changes requested"
+  - action: scheduled
+    date: 2026-09-09
+    note: "Scheduled via /schedule-approved, real Buffer call. buffer_post_id: 6aa1026da821ff5ff7114840, dueAt 2026-09-16T03:30:00Z (09:00 IST default). First live Buffer call from this pipeline."
 ---
 
 ## Post Text

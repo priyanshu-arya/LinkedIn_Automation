@@ -13,7 +13,7 @@ status: draft    # draft | in_review | approved | rejected | placeholder (placeh
 preferred_time: "" # HH:MM, set by approval (Change Time) or left blank for Scheduler's default posting-time optimization
 scheduled_id: ""   # id of the Scheduled/Published note once the Scheduler actually sends this to Buffer
 history:
-  - action: created # created | edited | regenerated | hook_changed | image_changed | time_changed | approved | rejected
+  - action: created # created | edited | regenerated | hook_changed | image_changed | time_changed | approved | rejected | scheduled
     date: YYYY-MM-DD
     note: ""
 ---
