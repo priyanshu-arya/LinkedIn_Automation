@@ -4,3 +4,16 @@
 .secrets/
 config/secrets.*
 *.token
+
+# Generated content — personal LinkedIn pipeline output, not code/templates
+Content-Research/
+Post-Ideas/
+Drafts/
+Scheduled/
+Visuals/
+Analytics/
+Published-Posts/
+Content-Learnings/content-index.md
+
+# Editor/vault-local settings
+.obsidian/

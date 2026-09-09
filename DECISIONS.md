@@ -579,3 +579,95 @@ these 15, never an arbitrary invented category), `_Templates/Research-
 Note.md`, `README.md`, and `SKILLS.md`. Net effect: research is still
 real-time and never topic-hardcoded, but it's scoped to these 15 pillars
 rather than anything trending anywhere.
+
+---
+
+## Phase 13 decisions
+
+### 2026-09-09 — Rejected the first framing (batch all 5 posts in one session)
+**[User]** Initial ask was "generate 5 posts for the week in one go." After
+a plan was written for that (one long session running the full chain 5
+times, backed by a new `content-index.md` and an upgraded `/generate-visual`
+already scoped in this same phase) and presented via `ExitPlanMode`, the
+user rejected it and asked for a materially different shape instead:
+sequential, per-post-isolated generation with weekly coherence, tied to a
+lighter posting cadence. Re-planned from scratch around the new framing
+before any implementation happened — nothing from the rejected framing had
+been built yet, so there was nothing to unwind.
+
+### 2026-09-09 — Cadence dropped from 5/week Mon–Fri to 3/week, Tue/Thu/Sat
+**[User]** Explicit rationale given: a daily-feeling Mon–Fri cadence risks
+looking like content produced "just to post," undermining the goal of
+genuine, thoughtful, valuable posts. Chose 3/week as the new default,
+Tue/Thu/Sat as an example schedule, explicitly framed as adjustable based on
+real engagement data — same provisional-default status REQUIREMENTS.md §11
+already gives posting *times*, now extended to posting *days* too. Also
+explicitly requested: never manufacture a post just to hit 3 — quality gates
+the count, not the other way around. REQUIREMENTS.md §5 and `plan-week`
+rewritten accordingly.
+
+### 2026-09-09 — Per-post isolation via real subagents, not a shared session
+**[User, after AskUserQuestion]** Asked directly whether "each post gets its
+own separate conversation" should mean (a) an actual subagent spawned per
+post via the `Agent` tool, or (b) one continuous session where each post
+only ever sees a compact context table for earlier posts. User chose (a).
+Rationale for asking rather than deciding: real cost/complexity tradeoff —
+(a) keeps each post's context genuinely clean and matches "separate
+conversation" literally, at the cost of more orchestration and each
+subagent re-reading voice-guide/playbook/etc. independently; (b) is cheaper
+and simpler but not literally isolated. Implemented in
+`.claude/skills/generate-week/SKILL.md`: subagents spawned sequentially
+(not in parallel), each pointed at the real skill files
+(`write-draft`/`critique-draft`/`generate-visual`) to follow directly rather
+than having their logic duplicated into the subagent prompt.
+
+### 2026-09-09 — Image generation stays prompt-only; no live API wired in
+**[User, after AskUserQuestion]** Confirmed explicitly (again, since the
+original Phase 6 decision already established this): the deliverable is the
+finished ChatGPT-Images prompt, not a rendered file. No OpenAI/other
+image-generation credentials get requested or wired in this phase.
+Scheduling stays text-only, unchanged from how `schedule-approved` already
+works (its Buffer mutation has no media field).
+
+### 2026-09-09 — Duplicate detection split into hard-reject vs. soft-flag
+**[Claude-default]** The user asked for detection across seven dimensions
+(topic, hook, storytelling, examples, conclusion, image concept, "same
+thing in different words") and said matches should be rejected in favor of
+a better angle. Rather than making every flagged similarity a hard stop
+(which would make `critique-draft`'s existing auto-revise flow meaningless
+for genuinely-borderline cases), drew an explicit line: a *genuine*
+duplicate (same underlying story/example/hook/conclusion) auto-rejects
+before reaching human review; a *stylistically similar but substantively
+distinct* post still just lowers the Originality sub-score, as before, for
+the human to weigh at `/review-drafts`. Revisit if this line proves too
+loose or too strict once real drafts start exercising it.
+
+### 2026-09-09 — Content index is a new file, not a rewrite of existing schemas
+**[Claude-default]** Rather than add all seven new dedup-relevant fields
+(hook_gist, key_examples, conclusion_type, image_concept, etc.) to every
+existing template (Draft/Visual/Scheduled), added one new compact table,
+`Content-Learnings/content-index.md`, following the exact pattern
+`playbook.md` already established (single versioned living doc, not one
+note per row). The real notes stay the source of truth; the index is
+explicitly documented as a fast lookup that must be confirmed against the
+real note before being acted on — avoids ever silently deciding something
+(like a hard duplicate rejection) from a stale or wrong summary row.
+
+### 2026-09-09 — Retry cap of 2 for a subagent re-angling after a duplicate
+**[Claude-default]** Needed a concrete stopping point for the "find a
+different angle and retry" loop inside `generate-week`'s per-post
+subagents, consistent with the existing "one revision pass, then report
+honestly" pattern already used by `critique-draft`'s auto-revise (Phase 5)
+and the "don't force a bad fit" pattern already used by `plan-week`. Capped
+at 2 retries per slot; if still stuck, the slot is reported genuinely
+unfillable this week rather than forced with a weaker or duplicate idea.
+
+### 2026-09-09 — Not yet validated live
+**[Claude-default, noted not decided]** This phase has not yet been
+exercised with a real `/generate-week` run — everything above was built for
+approval, not yet proven against real data the way Phase 2's research run
+or Phase 8's live Buffer call were validated. A genuine end-to-end run
+against the real vault (with real WebSearch/WebFetch calls, real subagent
+spawns, and — if the user wants to go that far in the same session — a
+real combined `/review-drafts` + `/schedule-approved` pass) is the next
+honest validation step, not a formality to skip.

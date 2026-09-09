@@ -254,7 +254,66 @@ Status legend: ✅ done · 🚧 in progress · ⬜ not started
   worth it while everything is manually/interactively triggered. Revisit
   if a scheduled automation phase gets built.
 
-## Phase 13+ — Multi-format expansion
+## Phase 13 — Weekly cadence revision, isolated per-post generation, visual trend research
+✅ Done
+
+- **Cadence revised** (REQUIREMENTS.md §5): default target dropped from 5
+  posts/week Mon–Fri to **3/week**, starting-heuristic days **Tue/Thu/Sat**
+  (Saturday now in scope by default, Sunday still excluded unless
+  requested). Hard rule strengthened: never pad the count to hit a quota —
+  fewer genuinely distinct, valuable posts is the correct outcome when
+  that's what the research supports. Content-type variety is no longer
+  bound to specific weekdays (the old fixed Mon=educational/Tue=tool/...
+  table assumed 5 fixed slots) — `/plan-week` now requires ≥2 distinct
+  categories among however many slots get filled, checking
+  `Content-Learnings/playbook.md` for an evidenced day/type pattern first.
+- **New living doc**: `Content-Learnings/content-index.md` — a single
+  compact table (same single-versioned-doc pattern as `playbook.md`) so
+  dedup/context checks are a table scan instead of reading every note in
+  `Drafts/`/`Visuals/`/`Scheduled/`/`Published-Posts/` in full.
+- **`/critique-draft` duplicate detection expanded and split into two
+  severities**: a first pass now scans the content index across seven
+  dimensions (topic, hook, storytelling, examples, conclusion, image
+  concept, format), not just topic/hook/examples. A *genuine* duplicate is
+  now a hard stop — the draft stays `status: draft` with a
+  `duplicate_flagged` history entry and never advances to `in_review` (a
+  known duplicate must never reach human review as if novel). A merely
+  *similar-but-distinct* post still just lowers the Originality sub-score,
+  as before, for the human to weigh.
+- **`/generate-visual` rewritten**: no longer produces a plain descriptive
+  brief — it now (1) checks the content index so this week's visuals don't
+  converge on the same format/concept by coincidence, (2) runs `WebSearch`
+  for current design/visual trends relevant to the specific post's concept
+  when that would actually change the outcome, and (3) writes a **finished,
+  paste-ready image-generation prompt for ChatGPT Images** (subject,
+  concept, composition, perspective, visual hierarchy, lighting, mood,
+  color, typography, aspect ratio) — still no image is ever rendered or
+  claimed as generated; the prompt is for manual use in ChatGPT Images, by
+  explicit decision (no image-generation API gets wired in). Template
+  (`_Templates/Visual-Brief-Note.md`) gained two sections: `## Visual Trend
+  Research` and `## Image Generation Prompt`.
+- **New orchestrator skill**: `.claude/skills/generate-week/SKILL.md`
+  (`/generate-week [week] [target_count]`). Plans the week's angles broadly
+  (`research-topic` → `generate-ideas` → `plan-week`, recalibrated to the
+  new cadence), then generates each post through its **own fresh subagent**
+  — genuinely isolated research/draft/critique/visual work, not one
+  continuous session accumulating all posts' context — spawned
+  sequentially so each can see the content index rows logged by earlier
+  posts this week. A subagent that hits a hard duplicate re-angles itself
+  (new candidate idea from the pool, or fresh `/research-topic` in the same
+  pillar) up to 2 retries before reporting the slot honestly unfillable.
+  After all slots are processed, runs `/review-drafts` once (naturally a
+  combined session for however many posts passed) and `/schedule-approved`
+  once, text-only. Final report includes a week-shape line and a
+  variety check (distinct pillars/formats/hook styles actually used).
+- **Not yet possible**: not yet exercised end-to-end for real (no live
+  `/generate-week` run against a real week yet — next real run is the
+  validation step). Subagent-per-post isolation adds real orchestration
+  complexity and token cost versus the single-session alternative that was
+  considered and not chosen (see DECISIONS.md) — worth revisiting if cost
+  becomes a real constraint.
+
+## Phase 14+ — Multi-format expansion
 ⬜ Not started (future scope, see REQUIREMENTS.md §22)
 
 ---

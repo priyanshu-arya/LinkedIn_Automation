@@ -113,10 +113,25 @@ select for strongest + most diverse set.
 
 ## 5. Weekly Cadence
 
-- 5 posts/week, Mon–Fri. No weekend posts unless manually requested.
-- Avoid same-topic repetition across the week; example mix: Mon educational,
-  Tue AI tool/tech, Wed technical/cheat-sheet, Thu opinion/career, Fri
-  resources/lessons. Mix should evolve based on analytics, not stay fixed.
+- **Default target: 3 posts/week**, not a fixed 5. Starting-heuristic days:
+  **Tue / Thu / Sat** — a provisional default (same status as §11's generic
+  posting-time default), to be replaced once `Content-Learnings/
+  playbook.md` has real evidence (≥3 published posts) on which days
+  actually perform for this account. Sunday stays excluded by default;
+  Saturday is in scope by default (previously excluded unless requested —
+  reversed because forcing every post into Mon–Fri artificially compressed
+  a lower-frequency cadence back toward a daily-feeling one).
+- **Quality gates the count — this is a hard rule, not a target to hit.**
+  Never generate or schedule a post just to reach 3/week. If the week's
+  research only supports 1 or 2 genuinely distinct, valuable angles, ship
+  that many and say so plainly. An honest gap is always preferred over a
+  manufactured or padded post.
+- Avoid same-topic repetition across the week. Content-type variety is
+  **not** bound to specific calendar days (a fixed Mon=X/Tue=Y table doesn't
+  fit a flexible 3-slot week) — instead, the week's chosen angles must span
+  at least 2 distinct categories/content-types, checked against the
+  Playbook's evidenced patterns first, falling back to this variety rule
+  otherwise. Mix should evolve based on analytics, not stay fixed.
 
 ---
 

@@ -24,6 +24,20 @@ the image — headings, callouts, not paragraphs)
 1200×627 (landscape) or 1080×1080 (square) — verify current LinkedIn image
 guidance before finalizing, platform specs can change.
 
+## Visual Trend Research
+
+(what was checked via WebSearch — queries/sources — and what it led to; or
+one line saying trend research wasn't needed for this concept and why)
+
+## Image Generation Prompt
+
+(one finished, paste-ready prompt block for ChatGPT Images, written fresh
+for this post — subject, concept, composition, perspective/environment,
+visual hierarchy, lighting, mood, color direction, typography (exact
+in-image text if any), and target aspect ratio, mapped to the nearest size
+ChatGPT Images actually accepts. Should need minimal or no further editing
+before being pasted in.)
+
 ## Why this visual
 
 (one sentence: what it adds beyond the post text alone — per REQUIREMENTS.md

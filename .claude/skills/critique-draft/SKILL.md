@@ -24,17 +24,35 @@ in the post text still traces to something in those notes' Summary/Key
 Findings. If drift is found (a claim not actually supported), fix it now —
 soften or remove the claim, don't just flag it and move on.
 
-### 2. Originality / duplicate check
-Compare this draft's topic, hook, examples, and core argument against:
-- `Published-Posts/` (real duplicates matter most here)
-- other `Drafts/` and `Scheduled/` notes
-- `Content-Learnings/playbook.md`'s "Topic Fatigue Watch" section, once it
-  has entries
+### 2. Originality / duplicate check (expanded, Phase 13)
+First pass: scan `Content-Learnings/content-index.md` (fast, compact) across
+seven dimensions — topic, hook, storytelling structure, examples,
+conclusion type, image concept, and category/format — for anything close to
+this draft. For anything the index flags, read the actual flagged note in
+full (`Published-Posts/`, other `Drafts/`, `Scheduled/`) to confirm before
+acting on it. Also check `Content-Learnings/playbook.md`'s "Topic Fatigue
+Watch" section. If `content-index.md` doesn't exist yet or is too thin to
+trust, fall back to reading the folders directly, as before.
 
-If something is too similar, note it in the critique. A close-but-not-
-identical match is a reason to push originality lower in scoring (step 3),
-not necessarily to reject outright — that judgment call belongs to the
-human approver, not this skill.
+Draw a hard line between two severities:
+- **Genuine duplicate** — the same underlying story/news item, example,
+  hook, or conclusion as an existing note from the same or a recent week.
+  This is not a scoring matter — see step 3a below, it skips normal
+  scoring entirely.
+- **Merely similar but substantively distinct** — same general topic or
+  style, different angle/argument/example. Note it in the critique and let
+  it pull the Originality sub-score down in step 3, same as before; still
+  goes to human review, the human approver makes the final call.
+
+### 2a. If a genuine duplicate was found, stop here — don't score or revise
+A genuine duplicate isn't fixable by rewording — it needs a different
+underlying angle entirely. Skip steps 3-4 (scoring, auto-revise) for this
+draft. Keep `status: draft` (do **not** advance to `in_review`, since
+advancing would surface a known duplicate to human review, which defeats
+the point of catching it here). Append `{action: duplicate_flagged, date,
+note: "<what it duplicates and how>"}` to history, and say so plainly and
+directly in the report — this draft's idea needs to be replaced with a
+genuinely different angle before it can be redrafted, not merely revised.
 
 ### 3. Score Viral Potential (0-10)
 Average these factors, each 0-10:
@@ -60,6 +78,8 @@ if it's still below 6 after one revision, say so plainly in the report
 rather than repeatedly regenerating.
 
 ### 5. Update the Draft Note
+(Skip this step entirely if 2a fired — that path already updated the note
+and stopped.)
 - Set `viral_score` to the final computed value.
 - Append a `history` entry: `{action: regenerated, date, note}` if step 4
   fired, otherwise `{action: critiqued, date, note}`.
@@ -69,10 +89,13 @@ rather than repeatedly regenerating.
 
 ## Report back
 
-Per draft: final viral_score, per-factor breakdown, whether it was
-auto-revised, and any duplicate/fatigue flags. Make clear this draft is now
-waiting for human approval — nothing has been approved, scheduled, or
-published.
+Per draft: either "HARD DUPLICATE — needs a new angle" (if 2a fired, name
+what it duplicates) or the final viral_score, per-factor breakdown, whether
+it was auto-revised, and any similar-but-distinct flags. Make clear a draft
+that reached `in_review` is now waiting for human approval — nothing has
+been approved, scheduled, or published. A draft left at `status: draft`
+with a duplicate flag is not waiting for anything — it needs a replacement
+idea before this skill can be run on it again.
 
 ## Notifications (REQUIREMENTS.md §24)
 
@@ -88,5 +111,7 @@ draft.
 - Never revise more than once per critique run.
 - Never move a draft straight to `approved` or `scheduled` — only
   `in_review`. Approval is a human action (Phase 7).
+- Never advance a draft flagged as a genuine duplicate (2a) to `in_review`
+  — a known duplicate must never reach human review as if it were novel.
 - Never soften an accuracy fix by leaving the unsupported claim in place
   "just flagged" — fix it or remove it.
