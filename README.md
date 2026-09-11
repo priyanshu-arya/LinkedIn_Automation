@@ -23,6 +23,7 @@
 - [📂 Repository & Vault Structure](#-repository--vault-structure)
 - [🤖 Multi-Agent Skills Matrix](#-multi-agent-skills-matrix)
 - [🚀 Quickstart & Setup](#-quickstart--setup)
+- [🖥️ Connecting to Claude Desktop](#️-connecting-to-claude-desktop)
 - [🔄 End-to-End Workflow Walkthrough](#-end-to-end-workflow-walkthrough)
 - [📝 Knowledge Base & Note Schemas](#-knowledge-base--note-schemas)
 - [📊 Scoring Rubrics](#-scoring-rubrics)
@@ -135,15 +136,17 @@ LinkedIn_Automation/
 │   ├── AI-Healthcare/                # AI applied to healthcare/medicine
 │   └── Resources/                    # Curated lists, roadmaps, cheat sheets
 │
-├── Post-Ideas/                       # Scored & Ranked Idea Pipeline
-├── Drafts/                           # Generated Drafts (awaiting critique/review)
-├── Visuals/                          # High-context visual design briefs
-├── Scheduled/                        # Approved posts in Buffer queue
-├── Published-Posts/                  # Live posts on LinkedIn
-├── Analytics/                        # Append-only engagement snapshots
+├── Post-Ideas/                       # Scored & Ranked Idea Pipeline           *(gitignored)*
+├── Drafts/                           # Generated Drafts (awaiting critique/review) *(gitignored)*
+├── Visuals/                          # High-context visual design briefs        *(gitignored)*
+├── Scheduled/                        # Approved posts in Buffer queue           *(gitignored)*
+├── Published-Posts/                  # Live posts on LinkedIn                   *(gitignored)*
+├── Analytics/                        # Append-only engagement snapshots         *(gitignored)*
 ├── Content-Learnings/                # Living Strategy Vault
 │   ├── playbook.md                   # Learned rules & audience insights
 │   └── voice-guide.md                # Writing tone, style & anti-patterns
+│
+├── Profile-Optimization/             # Profile rewrite + audit reports (personal output) *(gitignored)*
 │
 ├── _Templates/                       # Strict YAML frontmatter note templates
 │   ├── Research-Note.md
@@ -152,14 +155,23 @@ LinkedIn_Automation/
 │   ├── Visual-Brief-Note.md
 │   ├── Scheduled-Published-Note.md
 │   ├── Analytics-Record.md
-│   └── Playbook-Note.md
+│   ├── Playbook-Note.md
+│   └── Profile-Optimization-Note.md
 │
-├── DECISIONS.md                      # Complete architectural decision log
 ├── REQUIREMENTS.md                   # Product specification & vision
-├── SKILLS.md                         # Capability tracking & phase log
+├── Profile-Optimization-Spec.md      # Spec for the standalone Profile Optimization Agent
+├── COST-AND-SAFETY.md                # Cost & safety hardening audit
 ├── LICENSE                           # MIT License
 └── README.md                         # Project documentation
 ```
+
+> **What's actually in git:** only code, skills, templates, and specs are tracked.
+> Everything the pipeline *generates* at runtime (`Content-Research/`, `Post-Ideas/`,
+> `Drafts/`, `Visuals/`, `Scheduled/`, `Analytics/`, `Published-Posts/`,
+> `Profile-Optimization/`) is real, working state on disk but is gitignored —
+> it's personal content, not the codebase. Internal working logs
+> (`DECISIONS.md`, `SKILLS.md`, `PROMPTS.md`) are likewise local-only and not
+> part of the public repo.
 
 ---
 
@@ -179,6 +191,22 @@ All skills are implemented as Claude Code / Antigravity Agent skills located in 
 | `/schedule-approved [draft-id]` | **Scheduler Agent** | Verifies approval, validates date, pushes to Buffer via GraphQL API, manages rolling 2-day queue. | Post-Approval |
 | `/pull-analytics` | **Analytics Agent** | Ingests impressions, reactions, comments, shares, and clicks from Buffer into append-only Markdown tables. | Daily / Weekly |
 | `/update-playbook` | **Growth Agent** | Compares high vs. low performing posts, discovers statistical patterns, and updates `Content-Learnings/playbook.md`. | Weekly / Monthly |
+
+### Profile Optimization Agent (separate module)
+
+`/optimize-profile [pdf-path]` — not part of the posting pipeline above. Takes
+a LinkedIn Profile PDF export plus **exactly two target job descriptions** and
+produces a complete, evidence-only, copy-ready rewrite of the entire profile
+(headline, About, experience, skills, projects, Featured, etc.) plus a full
+audit: current vs. projected 100-point score, role-alignment scores, keyword
+strategy, gaps/evidence requests, and a Critical/High/Medium/Low action plan.
+One-off/periodic trigger, not a recurring cadence. Full spec:
+[`Profile-Optimization-Spec.md`](Profile-Optimization-Spec.md). Output written
+to `Profile-Optimization/` using `_Templates/Profile-Optimization-Note.md`.
+Same anti-hallucination discipline as the rest of this repo: every claim in
+the rewrite traces to an evidence ledger built from the PDF, and anything
+valuable-but-unsupported is flagged `[CONFIRM]`/`[ADD EVIDENCE]` rather than
+invented.
 
 ---
 
@@ -208,6 +236,48 @@ NOTIFICATION_WEBHOOK_URL=https://your-webhook-endpoint.com
 
 ### 3. Open in Obsidian (Optional but Recommended)
 Open the `LinkedIn_Automation` directory as an Obsidian Vault to enjoy graphical relationship visualizers, backlink panels, and Kanban-style pipeline tracking.
+
+---
+
+## 🖥️ Connecting to Claude Desktop
+
+This project was built and is designed to run as a **Claude Code** project — the
+skills lean on Claude Code's native `Bash`, `WebSearch`/`WebFetch`, and
+whole-directory file read/write to operate on the vault, run
+`scripts/validate_vault.py`, and call Buffer's GraphQL API. Claude Desktop
+doesn't have those tools by default, so a couple of things need to be wired up
+before the skills behave the same way there:
+
+1. **Enable Skills.** In Claude Desktop, go to **Settings → Capabilities**
+   and turn on **Skills**. Skills are uploaded as `.zip` files, one per skill —
+   zip each folder under [`.claude/skills/`](.claude/skills/) (each one must
+   contain its `SKILL.md` at the zip root) and add it via **Add skill**. This
+   gives Desktop the same prompt-level instructions Claude Code loads
+   automatically as slash commands.
+2. **Give Desktop filesystem access to the vault.** Skills read and write
+   Markdown notes across `Content-Research/`, `Post-Ideas/`, `Drafts/`, etc.
+   Desktop has no native folder mount, so connect the official filesystem MCP
+   server pointed at this repo's path (**Settings → Developer/Connectors →
+   Add custom connector**, running
+   `npx -y @modelcontextprotocol/server-filesystem "/path/to/LinkedIn_Automation"`).
+   Without this, Desktop can *talk about* the skills but can't actually read
+   or update your notes.
+3. **Enable Web Search.** `/research-topic` and `/generate-visual` depend on
+   live web search/fetch to verify primary sources. Turn on Desktop's built-in
+   **Web search** capability in the same Settings page.
+4. **Buffer scheduling stays Claude-Code-side.** `/schedule-approved` and
+   `/pull-analytics` make authenticated calls to Buffer's GraphQL API using
+   `BUFFER_ACCESS_TOKEN`. Desktop has no built-in HTTP/fetch tool for this —
+   either keep running those two skills from Claude Code, or wrap Buffer's API
+   in your own small MCP server and connect it the same way as step 2.
+
+In short: Desktop can review/ideate against the vault once the filesystem MCP
+server and web search are connected, but the full pipeline — including
+scheduling — is exercised in Claude Code, where it was verified end-to-end
+(see the [roadmap](#️-project-roadmap)). Menu names and the exact Skills upload
+flow may shift as Anthropic ships Desktop updates — check **Settings →
+Capabilities** for the current wording if a step above doesn't match what you
+see.
 
 ---
 
@@ -328,7 +398,7 @@ The `/critique-draft` agent scores drafts across 8 dimensions. Drafts scoring **
 ## ⚙️ Configuration & Customization
 
 ### Adapting Personal Voice
-Edit [Content-Learnings/voice-guide.md](file:///Volumes/Working/LinkedIn%20Agentic%20AI/Content-Learnings/voice-guide.md) to customize:
+Edit [Content-Learnings/voice-guide.md](Content-Learnings/voice-guide.md) to customize:
 - **Tone Boundaries:** Set preferred formality, technical depth, and cadence.
 - **Banned Phrases:** Expand the anti-AI cliché list.
 - **Formatting Rules:** Configure standard post length (e.g., 1,200–1,600 characters) and hashtag limits (3–5 tags).
@@ -362,21 +432,58 @@ Run `python3 scripts/validate_vault.py` to check every note in `Content-Research
 
 ## 🤝 Contributing
 
-Contributions are welcome! Whether you are adding new research source providers (arXiv, GitHub Trending, HackerNews), refining agent prompts, or improving analytical models:
+Contributions are welcome — new research source providers (arXiv, GitHub Trending,
+Hacker News), refined agent prompts, additional skills, or improvements to the
+scoring/validation logic.
 
-1. **Fork the Repository**
-2. **Create a Feature Branch:** `git checkout -b feature/amazing-feature`
-3. **Commit Your Changes:** `git commit -m "feat: add arxiv research provider"`
-4. **Push to the Branch:** `git push origin feature/amazing-feature`
-5. **Open a Pull Request**
+### Ground rules
 
-Please review [DECISIONS.md](file:///Volumes/Working/LinkedIn%20Agentic%20AI/DECISIONS.md) to understand existing architectural choices before submitting substantial changes.
+- **Read [REQUIREMENTS.md](REQUIREMENTS.md) first.** It's the source of truth for
+  intended behavior — architectural context that isn't obvious from the code alone.
+- **No fabricated content, ever.** This project's core value is anti-hallucination
+  guardrails (verify-or-drop sourcing, no invented metrics, no playbook rule
+  without real supporting evidence). Any change that weakens those guardrails
+  (in a skill prompt, a scoring rubric, or validation logic) will be rejected.
+- **Skills are plain Markdown, not code you compile.** Each skill lives at
+  `.claude/skills/<name>/SKILL.md`. Keep the frontmatter (`name`, `description`)
+  accurate — the description is what the agent uses to decide when to trigger
+  the skill, so vague descriptions cause misfires.
+- **Never commit generated or personal content.** `Content-Research/`, `Drafts/`,
+  `Post-Ideas/`, `Visuals/`, `Scheduled/`, `Analytics/`, `Published-Posts/`, and
+  `Profile-Optimization/` are gitignored on purpose (see [Repository & Vault
+  Structure](#-repository--vault-structure)) — don't force-add them, and don't
+  commit real API tokens (`.env` is gitignored; use `.env.example`-style
+  placeholders in docs).
+- **Validate before you open a PR.** Run `python3 scripts/validate_vault.py`
+  if your change touches note schemas/templates.
+
+### Workflow
+
+1. **Fork the repository.**
+2. **Create a feature branch:** `git checkout -b feature/amazing-feature`
+3. **Make focused commits** with clear messages (`feat: add arxiv research
+   provider`, `fix: correct viral-score weighting`).
+4. **Push to your branch:** `git push origin feature/amazing-feature`
+5. **Open a pull request** describing *what* changed and *why*, and which
+   skill(s)/section(s) it touches. Link any related issue.
+
+### Reporting issues
+
+Open a GitHub issue with: what you expected, what happened instead, and
+(if relevant) which skill/command triggered it. For anything that could be a
+security issue (credential handling, prompt injection via fetched web
+content), please don't open a public issue — contact the maintainer directly.
+
+### Code of conduct
+
+Be respectful and constructive in issues, PRs, and reviews. Disagree on
+substance, not people.
 
 ---
 
 ## 📄 License & Authors
 
-Distributed under the **MIT License**. See [LICENSE](file:///Volumes/Working/LinkedIn%20Agentic%20AI/LICENSE) for more details.
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for more details.
 
 **Author:** [Priyanshu Arya](https://github.com/priyanshu-arya)
 

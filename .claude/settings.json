@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "prompt=$(jq -r '.prompt'); ts=$(date -u +\"%Y-%m-%dT%H:%M:%SZ\"); printf '\\n## %s\\n\\n%s\\n' \"$ts\" \"$prompt\" >> \"$CLAUDE_PROJECT_DIR/PROMPTS.md\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

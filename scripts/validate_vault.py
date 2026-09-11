@@ -141,6 +141,18 @@ SPECS = [
         status_enum={"active", "placeholder"},
         category_key=None,
     ),
+    NoteSpec(
+        "profile-optimization", "Profile-Optimization", False,
+        required_keys=["id", "type", "source_pdf", "role_1_title",
+                        "role_2_title", "primary_position", "current_score",
+                        "projected_score", "status", "history"],
+        nonempty_scalar_keys=["id", "type", "source_pdf", "role_1_title",
+                               "role_2_title", "primary_position", "status"],
+        nonempty_list_keys=["history"],
+        status_key="status",
+        status_enum={"draft", "delivered", "placeholder"},
+        category_key=None,
+    ),
 ]
 
 
