@@ -52,11 +52,14 @@ Every `status: approved` draft with an empty `scheduled_id`. Determine
 timing:
 - If the draft has a `preferred_time` set (via Change Time in
   `/review-drafts`), use it.
-- Otherwise use a **generic starting default of 09:00** in the user's
-  local time, on the idea's `target_date`. This is an unvalidated
-  starting heuristic (REQUIREMENTS.md §11), not derived from real
-  performance data — say so, don't present it as optimized. Phase 10 is
-  expected to replace this once real analytics exist.
+- Otherwise use the **research-backed generic default time for that
+  weekday** from the table in REQUIREMENTS.md §11 (e.g. Tue 16:00, Thu
+  17:00, Sat 09:00, local/IST), on the idea's `target_date`. This is an
+  unvalidated starting heuristic sourced from external LinkedIn
+  best-time studies, not derived from this account's real performance
+  data — say so, don't present it as optimized. It's superseded
+  automatically once `Content-Learnings/playbook.md` has ≥3 published
+  posts' worth of day+time evidence (§13).
 
 ### 3. Call Buffer
 ```graphql

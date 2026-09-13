@@ -201,6 +201,30 @@ day+time+content-type combos (e.g., tutorials Wed afternoon, career posts Tue
 evening, breaking AI news ASAP rather than waiting for a slot). Scheduling
 becomes personalized over time.
 
+**Generic starting default (research-backed, as of 2026-09):** aggregated
+from Buffer's and Sprout Social's 2026 LinkedIn studies (multi-million-post
+datasets). All times are the user's local time (IST) — LinkedIn best-time
+research treats "X pm" as local to the poster/audience, no timezone
+conversion needed.
+
+| Day | Default time | Notes |
+|---|---|---|
+| Monday | 13:00 | |
+| Tuesday | 16:00 | strong window 11:00–17:00 |
+| Wednesday | 16:00 | single strongest slot across all studies |
+| Thursday | 17:00 | strong window 11:00, 13:00–17:00 |
+| Friday | 15:00 | |
+| Saturday | 09:00 | weekend engagement is weak platform-wide; morning outperforms evening if Saturday must be used |
+| Sunday | — | avoid; excluded from default cadence (§5) |
+
+For the project's default Tue/Thu/Sat cadence (§5) this means **Tue 16:00 /
+Thu 17:00 / Sat 09:00** local time until playbook evidence overrides it.
+This table is itself an unvalidated starting heuristic, not derived from
+this account's real performance data — `/schedule-approved` should say so,
+not present it as optimized. It is superseded automatically once
+`Content-Learnings/playbook.md` has ≥3 published posts' worth of
+day+time evidence (§13).
+
 ---
 
 ## 12. Analytics
