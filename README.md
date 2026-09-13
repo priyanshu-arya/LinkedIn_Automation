@@ -196,17 +196,26 @@ All skills are implemented as Claude Code / Antigravity Agent skills located in 
 
 `/optimize-profile [pdf-path]` — not part of the posting pipeline above. Takes
 a LinkedIn Profile PDF export plus **exactly two target job descriptions** and
-produces a complete, evidence-only, copy-ready rewrite of the entire profile
-(headline, About, experience, skills, projects, Featured, etc.) plus a full
-audit: current vs. projected 100-point score, role-alignment scores, keyword
-strategy, gaps/evidence requests, and a Critical/High/Medium/Low action plan.
-One-off/periodic trigger, not a recurring cadence. Full spec:
-[`Profile-Optimization-Spec.md`](Profile-Optimization-Spec.md). Output written
-to `Profile-Optimization/` using `_Templates/Profile-Optimization-Note.md`.
-Same anti-hallucination discipline as the rest of this repo: every claim in
-the rewrite traces to an evidence ledger built from the PDF, and anything
-valuable-but-unsupported is flagged `[CONFIRM]`/`[ADD EVIDENCE]` rather than
-invented.
+produces a complete, evidence-only, keyword-optimized, copy-ready rewrite of
+the entire profile (headline, About, experience, skills, projects, Featured,
+etc.), plus a full audit (current vs. projected 100-point score,
+role-alignment scores, keyword strategy, priority plan). The finished profile
+leads the output note; the audit is a collapsed appendix underneath it, not
+the headline deliverable. One-off/periodic trigger, not a recurring cadence.
+
+Never silently drops an empty or thin section just because the PDF didn't
+have anything for it — every gap and empty section is put to the user with a
+real choice: supply the real content, ask the agent to draft 2-4 concrete
+suggestions (clearly labeled unconfirmed until the user says they're actually
+true), or explicitly skip it. Every resolution is logged in the note's Gap
+Resolution Log, so nothing disappears quietly.
+
+Full spec: [`Profile-Optimization-Spec.md`](Profile-Optimization-Spec.md).
+Output written to `Profile-Optimization/` using
+`_Templates/Profile-Optimization-Note.md`. Same anti-hallucination discipline
+as the rest of this repo: every claim in the rewrite traces to an evidence
+ledger built from the PDF, and a suggestion the agent drafts to fill a gap is
+never treated as a fact until the user confirms it applies to them.
 
 ---
 

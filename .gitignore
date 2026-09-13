@@ -23,3 +23,6 @@ SKILLS.md
 
 # Editor/vault-local settings
 .obsidian/
+
+# MCP server deps
+mcp-server/node_modules/

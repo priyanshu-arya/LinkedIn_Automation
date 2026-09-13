@@ -60,6 +60,8 @@ DISCOVERY → CLASSIFICATION → CREDIBILITY → CONVERSION → ACTION
 - Use metrics whenever the source material supports them. When a metric is clearly valuable but missing, create a measurable-evidence request rather than inventing a number.
 - Distinguish "search value" from "conversion value." Some sections primarily help discovery; others primarily prove credibility or convert profile visitors.
 - Keep language human, specific, direct, and credible. Avoid buzzword clouds and generic claims.
+- Never silently drop an empty or thin section. Every applicable section — populated, gap, or genuinely empty — gets resolved with the user per §5.5 before the rewrite is written: the user either supplies the real content, accepts an agent-drafted suggestion (explicitly confirming it's true of them before it becomes a fact), or explicitly says to skip it. "Not present in the PDF" is never itself a reason to omit a section from the conversation.
+- A suggestion is not a fact. Content the agent drafts to help fill a gap (§5.5) stays labeled as a suggestion and must never appear in the copy-ready profile as a stated fact unless the user has explicitly confirmed it applies to them.
 
 # 2. Inputs and processing contract
 
@@ -172,6 +174,22 @@ Produce: final profile, before/after changes, keyword strategy, job mapping, gap
 | Leadership keywords     | Scope and influence                   | Technical Strategy, Hiring, Mentoring                 | About + Experience + Skills                                       |
 | Outcome keywords        | Value created                         | Latency, reliability, cost optimization, revenue      | Experience + project/case-study evidence                          |
 
+## 4.2a Sourcing keywords beyond the two required JDs
+
+The two target JDs (§2.1) remain the hard-required input for role analysis
+and positioning — that contract doesn't change. But keyword *coverage* can
+be strengthened cheaply: if the user has other real postings they're
+targeting (even just a handful of links or pasted titles), ask if they want
+to add them as supplementary keyword sources — extracting the terms that
+recur across multiple real postings is stronger evidence of what recruiters
+actually search than two JDs alone (§16.1). This is optional and never
+blocks the run; it only widens the keyword map when offered.
+
+A useful mix once the candidate keyword set is built: skew roughly 70%
+specific/exact terms (the named technology, the named title) and 30%
+broader category terms — specific terms convert better in search, broad
+terms catch adjacent recruiter phrasing (§16.1).
+
 ## 4.3 Keyword priority score
 
 ```
@@ -193,7 +211,7 @@ This is an internal decision framework, not a claimed LinkedIn ranking formula. 
 | Headline         | Classification + positioning    | High, selective     | Medium             | Use target role + 2–4 core concepts + impact/domain phrase.                                    |
 | Current title    | Recruiter matching              | High                 | High               | Use standard, truthful title; propose an externally understandable variant only when accurate. |
 | Experience       | Search + evidence + credibility | High in context      | Very high           | Every major bullet should combine action + relevant capability + outcome/scale when supported. |
-| Skills            | Capability map                  | High but curated     | Low                 | Prefer 30–50 highly relevant skills for senior technical profiles; do not stuff 100.           |
+| Skills            | Capability map                  | High but curated     | Low                 | LinkedIn allows up to 100 (§16.1); stuffing toward that ceiling dilutes relevance. Curate 15–25 for early/mid-career, up to ~35 for senior technical profiles, always evidence-backed. Even a short curated list clears the practical bar — profiles listing 5+ relevant skills already see materially more recruiter contact (§16.1). |
 | About             | Narrative + semantic context    | Medium-high          | High               | Use natural reinforcement, not repetition.                                                     |
 | Projects          | Technical proof                 | Medium               | Very high           | Problem → solution → architecture → technology → scale → result → evidence.                    |
 | Featured          | Conversion                      | Low for search       | Very high           | Use strongest proof artifacts; do not pretend Featured drives search discovery.                |
@@ -233,6 +251,46 @@ Optimize for proof per sentence. Prefer specific descriptions that communicate o
 - Detect "soft claims" that imply expertise without evidence, and downgrade them to neutral wording or a user-confirmation request.
 - When evidence is missing but strategically important, output `[CONFIRM / ADD EVIDENCE]` rather than fabricate content.
 
+## 5.5 Gap-resolution protocol (ask, don't silently omit)
+
+The single most common way this product disappoints a user is not a fabricated
+fact — it's a section that quietly disappears because the PDF didn't have
+anything for it. A missing section is a decision point, not a reason to skip
+straight to the rewrite. Before step 11 (rewrite), every gap logged in the
+evidence ledger (`M-xxx`) and every applicable-but-entirely-empty section
+(Certifications, Featured, Publications, Patents, Awards, Recommendations,
+Projects, Languages, etc.) gets resolved with the user, one batched pass, not
+scattered one-question-at-a-time interruptions.
+
+For each open item, give the user exactly this choice:
+
+1. **Provide it** — the user supplies the real information. It becomes a
+   normal ledger fact (`F-xxx`) and flows into the rewrite like anything else
+   from the PDF.
+2. **Have the agent suggest options** — the agent proposes 2-4 concrete,
+   realistic, role-relevant options (e.g., named certifications worth
+   pursuing for the target role, a sample metric-shaped sentence with the
+   number left blank for the user to fill in, a recommendation-request theme
+   and who to ask, a project framing template). Every suggestion is labeled
+   `[SUGGESTED — NOT YET TRUE]` inline and is a starting point for the user
+   to accept as-is, edit, or reject — never a fact until the user confirms it.
+3. **Skip it** — the user explicitly declines. This is different from the
+   PDF simply not mentioning it: the user was asked and chose not to add it
+   now. Log the decision either way.
+
+A suggestion only becomes copy-ready content once the user confirms it's
+literally true of them right now (already holds the certification, is
+actually pursuing it, genuinely wants that project framing, etc.) — accepting
+"good idea" is not the same as confirming truth. If a user says "yes, add
+that certification as something I'm pursuing," write it as in-progress, not
+as held. If the user just likes the idea for the future, it goes in the
+maintenance plan (§15), not the copy-ready block.
+
+Every resolution (real answer / agent-suggested-and-confirmed / explicitly
+skipped) gets one line in the output note's Gap Resolution Log (§10.1a) —
+this is what makes "nothing was silently ignored" independently checkable
+without re-reading the whole diagnostic.
+
 # 6. Complete LinkedIn section/field optimization framework
 
 The agent should inspect every applicable field. The supplied research groups sections into Core, Recommended, and Additional areas and emphasizes that different fields have different strategic roles.
@@ -264,7 +322,7 @@ The agent should inspect every applicable field. The supplied research groups se
 | Organizations                              | Community / identity             | Low-medium                            | Professional communities that signal real identity.                                      | Avoid list dumping.                                                             |
 | Causes                                      | Context                          | Low                                    | Use only when it contributes to authentic story.                                         | Never optimize for recruiter search.                                            |
 | Services                                    | Discovery for service providers  | Role dependent                        | Clear service taxonomy.                                                                   | Optimize if consultant/freelancer/advisor/independent architect.                |
-| Open to Work / career preferences          | Recruiter discovery              | High for job seekers                  | Target job types, locations, availability, and appropriate visibility.                  | Recommend "Everyone" vs "Recruiters only" based on situation.                   |
+| Open to Work / career preferences          | Recruiter discovery              | High for job seekers                  | Target job types, locations, availability, and appropriate visibility.                  | Present the "Everyone" (public green frame) vs. "Recruiters only" trade-off explicitly and let the user choose — public visibility measurably increases recruiter InMail rates, but some hiring-manager perception research pushes the other way, and it's a personal risk call (current employer visibility) the agent shouldn't make silently (§16.1). |
 | Career Break                                | Transparency                     | Low for SEO                           | Legitimate reason + professional narrative if useful.                                    | Prefer truthful career break over fictional employment.                         |
 | Public profile URL                          | Identity / brand                 | Low-medium                            | Custom, recognizable URL.                                                                  | Recommend clean public URL.                                                     |
 | Contact information                         | Conversion                       | Low for search                        | Professional contact paths.                                                                | Use only appropriate public contact information.                                |
@@ -283,6 +341,24 @@ The agent should inspect every applicable field. The supplied research groups se
 - Include technologies only when they are genuinely differentiating and target-relevant.
 - End with a value phrase that shows what the person builds, scales, leads, or changes.
 - Avoid "passionate," "results-driven," "ninja," "guru," and similar empty descriptors unless the user specifically wants a personal-brand voice and the phrase adds real information.
+- **Front-load for the ~70-character visible window.** LinkedIn allows up to
+  220 characters, but only roughly the first 70 show in search results, the
+  mobile preview, and next to comments — the exact target-role phrase and
+  the strongest specialization keyword must land inside that window, not
+  after the third pipe (§16.1).
+- **Prefer the literal phrase a recruiter would type**, not just a related
+  concept — search still weighs exact/near-exact phrase matches heavily, so
+  "Data Engineer" outranks a synonym like "Data Pipeline Specialist" for a
+  recruiter searching the literal title, when the literal title is truthful
+  (§16.1).
+
+## 7.1a "It's not on LinkedIn" is not a stopping point
+
+For every generator in this section, if the source evidence for a slot is
+missing (no headline history to anchor to, no clear domain phrase, no metric
+for the value clause), that slot is a §5.5 gap-resolution item, not a reason
+to leave the section thin or generic. Resolve it with the user before
+finalizing the section.
 
 ## 7.2 About generator
 
@@ -303,6 +379,14 @@ WHAT I WANT TO BE KNOWN FOR
 ↓
 CTA
 ```
+
+- **Front-load the first ~300 characters** (roughly the HOOK + WHO I AM
+  beats). LinkedIn truncates About at ~300 characters on desktop and ~200 on
+  mobile before "see more" — the primary role keyword and the single
+  strongest proof point must appear before that cutoff, since most readers
+  (and a fast recruiter scan) never click through (§16.1). The full section
+  can use up to 2,600 characters; use the room, but don't bury the lede in
+  it.
 
 ## 7.3 Experience bullet generator
 
@@ -422,25 +506,52 @@ The weights above are an agent design choice for comparative diagnosis, not a Li
 
 # 10. Output package and copy-ready format
 
+## 10.0 Delivery shape: the profile leads, the report follows
+
+The user's actual deliverable is a finished, recruiter-ready LinkedIn
+profile — not an audit. Every output note is ordered so the complete
+copy-ready profile is the first thing a reader sees after the frontmatter,
+followed by a short (≤10 line) summary of what changed and why. Everything
+else this section used to treat as equally prominent — both role analyses,
+the evidence ledger, the keyword placement matrix, the priority plan, the
+maintenance plan, the QA checklist — still gets produced in full (nothing
+here is cut), but lives together under one collapsed **Appendix: Full
+Diagnostic Report** heading at the bottom of the same note. The appendix is
+reference material for someone who wants to audit the reasoning, not
+something the user has to scroll past to reach their profile.
+
+In chat, report back even leaner than the note: the file path, the chosen
+primary position, the score delta in one line, and at most 3-5 items that
+genuinely need the user's attention (unresolved gaps, a positioning
+trade-off) — never restate the full diagnostic in the chat turn. See step 13.
+
 ## 10.1 Required final output
 
-1. Executive diagnosis: current positioning, strongest assets, biggest blockers.
-2. Primary market position: target identity the profile should communicate.
-3. Role #1 analysis: requirements, matches, gaps, keywords, evidence.
-4. Role #2 analysis: requirements, matches, gaps, keywords, evidence.
-5. Two-role overlap/conflict report and primary-position decision.
-6. Current 100-point profile score with rationale.
-7. Role-alignment score for each target role.
-8. Complete rewritten LinkedIn profile, ready to copy/paste.
-9. Before vs. after for every relevant section.
-10. Keyword strategy: primary, secondary, supporting, avoid/low-priority.
-11. Keyword placement matrix.
-12. Profile gaps and missing evidence.
-13. Recommended additions and evidence-gathering questions.
-14. Recruiter-search configuration recommendations.
-15. Personal-brand and Featured recommendations.
-16. Critical / High / Medium / Low action plan.
-17. 30–90 day maintenance plan.
+Ordering matters as much as content — see §10.0. Produced in full every run:
+
+1. Complete rewritten LinkedIn profile, ready to copy/paste (leads the note).
+2. Short summary: primary position, score delta, what changed, in ≤10 lines.
+3. Gap Resolution Log (§10.1a) — every gap/empty section and how it was
+   resolved with the user.
+4. *(Appendix, collapsed together)* Executive diagnosis; Role #1 analysis;
+   Role #2 analysis; two-role overlap/conflict report; current 100-point
+   profile score with rationale; role-alignment score for each target role;
+   evidence ledger; before vs. after for every relevant section; keyword
+   strategy (primary/secondary/supporting/avoid) and placement matrix;
+   recruiter-search configuration recommendations; personal-brand/Featured
+   recommendations; Critical/High/Medium/Low action plan; 30-90 day
+   maintenance plan; QA checklist.
+
+## 10.1a Gap Resolution Log
+
+One row per item raised in the §5.5 gap-resolution pass — the audit trail
+that proves nothing was silently dropped, without requiring anyone to read
+the full appendix to check it.
+
+| Section / gap | Resolution | What was used |
+|---|---|---|
+| e.g. Certifications (empty) | User chose: agent-suggested, then confirmed | "Pursuing AWS Certified Solutions Architect – Associate" (user confirmed in-progress) |
+| e.g. M-003 quantified metric | User declined to provide | Left out of copy-ready block; noted in maintenance plan as a 30-day action |
 
 ## 10.2 Copy-ready profile output structure
 
@@ -803,6 +914,74 @@ The supplied research recommends choosing one recognizable niche rather than pos
 > https://www.linkedin.com/help/linkedin/answer/a518980
 >
 > https://www.linkedin.com/help/linkedin/answer/a540837
+
+## 16.1 2026-09-13 research refresh
+
+The original supplied research document above (§16) is preserved verbatim as
+the historical source basis. This subsection adds a second, independently
+verified pass — live web research done specifically to check whether the
+platform mechanics behind that guidance had changed, and to ground the
+keyword/placement rules in specific, current numbers rather than general
+advice. Confirmed against LinkedIn's own Help pages where a hard platform
+limit is claimed; industry-aggregated for softer behavioral claims (labeled
+accordingly below — these are widely-repeated practitioner findings, not
+LinkedIn-disclosed ranking weights, consistent with this spec's existing
+posture in §4.3 and §9).
+
+**Confirmed directly from LinkedIn Help:**
+- Members can add up to 100 skills to a profile (LinkedIn Help, "Add and
+  remove skills on your profile"). This doesn't change the agent's curation
+  guidance (§4.4, §6) — quality over volume still holds — it just corrects
+  the platform ceiling itself.
+- Headline: 220-character field limit; only roughly the first 70 characters
+  render in search results, the mobile app, and next to comments — this is
+  why front-loading the target role and top keyword matters mechanically,
+  not just stylistically (§7.1).
+- About: 2,600-character field limit; truncates for the reader at roughly
+  300 characters on desktop and 200 on mobile before a "see more" click
+  (§7.2).
+
+**Industry-aggregated (not LinkedIn-disclosed, treat as directional):**
+- Recruiter/People Search appears to weigh exact or near-exact phrase
+  matches in the headline and current-title fields heavily, on top of
+  broader semantic/contextual matching — reinforces "use the literal target
+  title when truthful" (§1.3) over a paraphrase.
+- Profiles that list at least ~5 clearly relevant skills report
+  substantially higher recruiter contact rates than profiles with few or no
+  skills listed — supports asking the user to fill a thin Skills section
+  rather than leaving it sparse, even before it reaches the curated 15-35
+  range (§4.4).
+- Recent, visible activity appears to influence how a profile surfaces in
+  search results, not just static field content — relevant context for the
+  existing Activity/content row in §6, not a reason to change this module's
+  scope (content strategy is the separate posting pipeline, not this
+  one-off rewrite module).
+- The public "Open to Work" photo frame correlates with materially higher
+  recruiter InMail rates, but some hiring-manager sentiment pushes the other
+  direction (perceived as broadcasting availability rather than targeted
+  interest); "Recruiters only" visibility is a commonly recommended
+  middle path. Treated as a user choice to present, not a default the agent
+  picks (§6, Open to Work row).
+- A practical way to source keywords beyond a single JD: extract terms that
+  recur across multiple real postings for the target role (5-15 postings in
+  the fuller version of this technique), then skew roughly 70% specific/
+  exact-match terms to 30% broader category terms (§4.2a).
+
+**Sources consulted (2026-09-13):**
+- https://www.linkedin.com/help/linkedin/answer/a549047 (LinkedIn Help — Add and remove skills on your profile; confirms the 100-skill limit)
+- https://blog.theinterviewguys.com/linkedin-seo/
+- https://blog.theinterviewguys.com/linkedin-keywords/
+- https://blog.theinterviewguys.com/linkedin-open-to-work-guide/
+- https://blog.theinterviewguys.com/linkedins-hidden-open-to-work-settings-that-actually-work/
+- https://linkedinrank.com/blogs/linkedin-search-algorithm-explained
+- https://connectsafely.ai/articles/how-to-use-keywords-on-linkedin-profile-seo-2026
+- https://authoredup.com/blog/linkedin-character-limit
+
+None of these industry-aggregated sources are LinkedIn-official ranking
+disclosures — treated the same way this spec already treats the original
+supplied research's keyword-score formula (§4.3): an internal decision
+framework informed by the best available evidence, never claimed as the
+platform's actual algorithm.
 
 > **Final product principle**
 > The agent should produce a profile that is machine-readable, recruiter-searchable, human-convincing, evidence-heavy, narrowly positioned, and continuously maintained — while remaining completely faithful to the candidate's actual experience.
