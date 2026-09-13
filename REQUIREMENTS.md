@@ -50,6 +50,18 @@ The default research mode scans across all pillars rather than being scoped
 to one at a time, so trend strength (not the caller) decides which pillar(s)
 get covered in a given run.
 
+**Research pillar, specifically:** covers posts built from real, verified
+research papers (arXiv, ACM/IEEE, company/lab publications, etc.) on trending
+AI, Machine Learning, Deep Learning, Data Engineering, Algorithms, and
+adjacent tech topics. A Research post must actually read the paper (not just
+a press summary), then explain it as the author's own plain-language
+take: what the paper found, why it matters, and a simple explanation with a
+real-life example or practical usage — not an academic abstract restated.
+Referencing/linking the source paper is optional per post (use it sometimes,
+not every time); never fabricate a paper, finding, or citation — only
+reference papers actually verified during research (per the Verification
+rules above).
+
 Maps to `Content-Research/` vault folders: AI, Career (= Tech Career),
 Developer-Tools, GenAI, Machine-Learning, Deep-Learning,
 Interview-Preparation, Data-Analytics, Data-Engineering, Mathematics (=
