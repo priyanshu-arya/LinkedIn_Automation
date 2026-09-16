@@ -201,6 +201,137 @@ class ValidateNoteDraftTests(unittest.TestCase):
             self.assertTrue(any("filename stem" in m for m in messages), messages)
 
 
+class ValidateNoteDraftPhase17Tests(unittest.TestCase):
+    """Covers the Phase 17 (Post Writer) Draft Note additions: the four new
+    optional frontmatter fields (hook_formula, engagement_goal,
+    founders_angle, spine_id). All must stay backward-compatible with every
+    draft written before Phase 17, which has none of these keys at all."""
+
+    def _minimal_draft_frontmatter(self, extra: str = "", idea_id: str = "2026-01-01--idea") -> str:
+        return (
+            "id: 2026-01-01--example\n"
+            "type: draft\n"
+            f'idea_id: "{idea_id}"\n'
+            "platform: linkedin\n"
+            "category: AI\n"
+            "format: ai-tech\n"
+            "hook_style: test\n"
+            f"{extra}"
+            'hashtags: ["#AI"]\n'
+            "visual_ids: []\n"
+            "sources:\n"
+            "  - 2026-01-01--research\n"
+            "viral_score: 7.0\n"
+            "status: in_review\n"
+            "history:\n"
+            "  - action: created\n"
+        )
+
+    def test_pre_phase17_draft_with_no_new_fields_is_still_valid(self):
+        # No hook_formula/engagement_goal/founders_angle/spine_id keys at
+        # all — exactly what every draft written before this phase looks
+        # like. Must not error.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example", self._minimal_draft_frontmatter(),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_new_fields_present_but_empty_is_valid(self):
+        extra = (
+            'hook_formula: ""\n'
+            'engagement_goal: ""\n'
+            'founders_angle: ""\n'
+            'spine_id: ""\n'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(extra),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_new_fields_present_with_valid_values_is_valid(self):
+        # idea-path draft: idea_id set, spine_id absent — the ordinary case.
+        extra = (
+            "hook_formula: F10\n"
+            "engagement_goal: comments\n"
+            "founders_angle: A5\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(extra),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_spine_path_draft_with_empty_idea_id_is_valid(self):
+        # spine-path draft (Phase 17 --spine): idea_id blank, spine_id set —
+        # must NOT trip the old idea_id-required assumption.
+        extra = (
+            "hook_formula: F10\n"
+            "engagement_goal: comments\n"
+            "spine_id: 2026-01-01--spine\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(extra, idea_id=""),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_both_idea_id_and_spine_id_set_errors(self):
+        extra = "spine_id: 2026-01-01--spine\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(extra, idea_id="2026-01-01--idea"),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("both set" in m for m in messages), messages)
+
+    def test_neither_idea_id_nor_spine_id_set_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(idea_id=""),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("Neither" in m for m in messages), messages)
+
+    def test_invalid_engagement_goal_errors(self):
+        extra = "engagement_goal: virality\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(extra),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("engagement_goal" in m for m in messages), messages)
+
+    def test_each_closed_list_engagement_goal_value_is_valid(self):
+        for goal in sorted(vv.ENGAGEMENT_GOALS):
+            with tempfile.TemporaryDirectory() as tmp:
+                path = write_note(
+                    Path(tmp), "2026-01-01--example",
+                    self._minimal_draft_frontmatter(f"engagement_goal: {goal}\n"),
+                )
+                issues = vv.validate_note(path, DRAFT_SPEC)
+                errors = [i for i in issues if i.level == "ERROR"]
+                self.assertEqual(errors, [], f"goal={goal!r} unexpected errors: {errors}")
+
+
 STORY_BANK_SPEC = spec_by("story-bank", "Content-Learnings")
 HOOK_FORMULAS_SPEC = spec_by("hook-formulas", "Content-Learnings")
 
