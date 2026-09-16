@@ -2,7 +2,7 @@
 
 Status: **Draft — requirements captured, no implementation started.**
 Owner: Priyanshu Arya
-Last updated: 2026-09-16 (§26 added: Story Bank / Interviewer)
+Last updated: 2026-09-17 (§27 added: Reading Third-Party Post Content)
 
 ---
 
@@ -531,3 +531,41 @@ suggested close). This is stored as its own entry, in the same
 `story-bank.md` file under a `## Post Spines` section — not a separate
 scratch file — so spines accumulate and stay queryable by `id` alongside
 the material they cite.
+
+---
+
+## 27. Reading Third-Party Post Content (Shared Convention)
+
+Added 2026-09-17. Four skills across this repo need to read the content of
+a post someone else published — `/extract-hook` (Phase 16, reverse-
+engineering a viral post's hook) and three later builds: Comment Drafter,
+Reply Handler, and Engagement Monitor. Rather than each one re-deriving
+its own rule for how that reading happens, the rule is stated once, here,
+and every skill that needs it cross-references this section instead of
+restating it.
+
+**No official API exists anywhere in this repo for reading an arbitrary
+third-party post's content from just a URL** — on LinkedIn or any other
+platform. Buffer, this system's only platform integration, covers the
+user's own scheduling/publishing/analytics, never someone else's content.
+
+**WebFetch on a gated post URL is unreliable.** It may be attempted as a
+best-effort convenience, but it typically returns a login wall or a
+stripped/partial page rather than the full text. Its result must never be
+treated as ground truth without the user explicitly confirming it matches
+what they actually see when they view the post themselves.
+
+**The primary, reliable input is the user pasting the text directly.** A
+URL is optional metadata only — useful for filing, reference, or dedup —
+never the sole data source a skill drafts, classifies, or replies from.
+
+**No skill in this repo scrapes, uses session cookies, or otherwise
+bypasses login/ToS to read third-party content** — the same precedent as
+§25.3's rejection of an unofficial, session-cookie-based Substack API for
+this system's own publishing. If it wasn't acceptable to bypass ToS to
+*publish* the user's own content, it isn't acceptable to bypass it to
+*read* someone else's.
+
+**Every skill following this convention says so explicitly in its own
+SKILL.md** — a one-line cross-reference to this section — rather than
+re-stating the full rule inline.
