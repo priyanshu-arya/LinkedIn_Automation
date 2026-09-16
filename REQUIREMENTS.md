@@ -2,7 +2,7 @@
 
 Status: **Draft — requirements captured, no implementation started.**
 Owner: Priyanshu Arya
-Last updated: 2026-09-14 (§25 added: multi-platform expansion to X and Substack)
+Last updated: 2026-09-16 (§26 added: Story Bank / Interviewer)
 
 ---
 
@@ -473,3 +473,61 @@ column so cross-platform dedup and fatigue checks share one index instead
 of three, while the underlying per-platform playbooks and voice guides stay
 separate — evidence and voice do not transfer across platforms by
 assumption.
+
+---
+
+## 26. Story Bank (Interviewer)
+
+Added 2026-09-16. Every content-generation skill so far (`/write-draft` and
+its X/Substack variants, `/plan-week`, `/generate-week`) has assumed either
+a research note or a prior post archive to ground itself in. Neither exists
+for a user who hasn't posted yet, and even for an established account,
+research notes don't carry the specific personal material — a real number,
+a war story, a position the user would actually defend — that separates a
+generic post from one only this person could have written. The **Story
+Bank** is where that material lives.
+
+**What it stores, and why.** Six categories, direct from the user's own
+mouth only: **Roles** (what they've actually done), **Receipts** (real
+numbers with a named referent — never a rounded or invented one),
+**Turning Points** (beliefs abandoned, and the cost), **Scars** (hard
+lessons from a reversal or failure), **Defensible Positions** (contrarian
+views the user would actually defend, distinguished from stated fact per
+§21's opinion/fact discipline), and **Told-Out-Loud Stories** (narratives
+already pre-tested by being told verbally, not written for the first time
+during a draft). None of this is ever inferred, estimated, or generated —
+it is recorded only from a direct interview (`/interviewer`), the same
+never-fabricate discipline as §21 applied to a new kind of source: the
+user themselves, not a web search.
+
+**Single living document.** All of it lives in one file,
+`Content-Learnings/story-bank.md`, using the same single-versioned-doc
+pattern as `playbook.md` (§13) rather than one note per item — rows
+accumulate under a stable `id` per row (never referenced by position) as
+repeated interviews add to it. Corrections to an existing row are explicit,
+logged, user-requested edits, never a silent overwrite.
+
+**Read by every content-generation skill, not just this one.** Rather than
+a drafting skill prompting the user mid-draft for "a real example" or "a
+number that backs this up," it should read `story-bank.md` first and pull
+an existing Receipt/Scar/Position/Story that fits, citing it by `id`. This
+skill (`/interviewer`) only ever writes the Story Bank — it never drafts,
+critiques, schedules, or publishes; wiring individual reading skills (e.g.
+`/write-draft --spine`) to actually consume it is separate, incremental
+work tracked per-skill, not a requirement that this skill itself implement.
+
+**The only skill that works with zero post archive.** Every other
+content-generation skill needs either research notes or prior posts to
+ground a draft. `/interviewer`'s onboarding mode (Mode A) needs neither —
+it draws directly on the user's career history through a guided interview,
+which is why it is the correct starting point for a brand-new account with
+no archive at all.
+
+**Mode B: Post Spines.** A focused, single-topic interview
+(`/interviewer <topic>`) doesn't run the full six-category onboarding
+round — it asks a handful of targeted questions and assembles a **Post
+Spine** (hook angle, story beat, cross-referenced receipt/position, a
+suggested close). This is stored as its own entry, in the same
+`story-bank.md` file under a `## Post Spines` section — not a separate
+scratch file — so spines accumulate and stay queryable by `id` alongside
+the material they cite.

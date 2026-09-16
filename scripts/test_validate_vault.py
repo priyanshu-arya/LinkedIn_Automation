@@ -201,6 +201,66 @@ class ValidateNoteDraftTests(unittest.TestCase):
             self.assertTrue(any("filename stem" in m for m in messages), messages)
 
 
+STORY_BANK_SPEC = spec_by("story-bank", "Content-Learnings")
+
+
+class ValidateNoteStoryBankTests(unittest.TestCase):
+    """Covers the Phase 15 (Interviewer) story-bank NoteSpec: a single
+    living doc (same pattern as playbook.md) with no `status` field on the
+    note itself, so is_placeholder is always False for this type — content
+    checks always apply, unlike every other note type which can opt out via
+    `status: placeholder`."""
+
+    def _minimal_story_bank_frontmatter(self, last_updated: str = "2026-09-16") -> str:
+        return (
+            "id: story-bank\n"
+            "type: story-bank\n"
+            "version: 1\n"
+            f"last_updated: {last_updated}\n"
+        )
+
+    def test_valid_story_bank_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "story-bank", self._minimal_story_bank_frontmatter(),
+            )
+            issues = vv.validate_note(path, STORY_BANK_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_last_updated_field_errors(self):
+        fm = self._minimal_story_bank_frontmatter().replace(
+            "last_updated: 2026-09-16\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "story-bank", fm)
+            issues = vv.validate_note(path, STORY_BANK_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("last_updated" in m for m in messages), messages)
+
+    def test_empty_last_updated_value_errors(self):
+        # The template's own placeholder value (`last_updated: ""`) is
+        # correct for an unpopulated template, but a real note (this note
+        # type has no `placeholder` status to exempt it) must have it
+        # filled in once it actually exists in the vault.
+        fm = self._minimal_story_bank_frontmatter(last_updated='""')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "story-bank", fm)
+            issues = vv.validate_note(path, STORY_BANK_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("last_updated" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_story_bank_frontmatter().replace(
+            "id: story-bank\n", "id: story-bank-wrong\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "story-bank", fm)
+            issues = vv.validate_note(path, STORY_BANK_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
 class RouteNoteSpecTests(unittest.TestCase):
     """Covers the multi-spec-per-folder routing added alongside the
     Substack expansion (Drafts/ now holds both `draft` and
