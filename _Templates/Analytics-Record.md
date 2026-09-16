@@ -2,6 +2,7 @@
 id: YYYY-MM-DD--kebab-slug
 type: analytics
 post_id: ""     # id of the Published-Posts note this tracks
+platform: linkedin # linkedin | x | substack-article | substack-note
 status: active  # active | placeholder (placeholder = hand-written example, never treated as real input by any skill)
 ---
 

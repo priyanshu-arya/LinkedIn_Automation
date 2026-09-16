@@ -1,14 +1,26 @@
 ---
 name: update-playbook
-description: Use when the user wants to analyze content performance, update the Content Playbook, run the Growth Agent, or explicitly invokes /update-playbook. Derives evidence-backed rules from Analytics/ data and updates Content-Learnings/playbook.md. Refuses to invent a pattern when the sample size is too small.
+description: Use when the user wants to analyze content performance, update a Content Playbook (LinkedIn, X, or Substack), run the Growth Agent, or explicitly invokes /update-playbook. Derives evidence-backed rules from Analytics/ data, scoped to one platform at a time, and updates that platform's playbook file. Refuses to invent a pattern when the sample size is too small.
 ---
 
-# Update Playbook (Growth Agent — Phase 10)
+# Update Playbook (Growth Agent)
 
-Turns real Analytics data into structured, evidence-cited rules in
-`Content-Learnings/playbook.md`, closing the loop described in
-REQUIREMENTS.md §17-18. This is the only skill that writes to the
-playbook.
+Turns real Analytics data into structured, evidence-cited rules in a
+platform-scoped playbook file, closing the loop described in
+REQUIREMENTS.md §17-18. This is the only skill that writes to any playbook
+file. The algorithm below is identical regardless of platform — only which
+files it reads/writes changes.
+
+## Arguments
+
+- **platform** (optional) — `linkedin` (default), `x`, or `substack`.
+  Determines which Analytics/Published-Posts notes to gather (filtered by
+  their `platform` field) and which playbook file to update:
+  `Content-Learnings/playbook.md` (linkedin), `playbook-x.md` (x), or
+  `playbook-substack.md` (substack — update the Articles and Notes
+  sections independently within that one file, per its own header note).
+  Never mix platforms' evidence into one rule — a pattern proven on
+  LinkedIn is not assumed to transfer to X or Substack, and vice versa.
 
 ## Minimum evidence bar
 
@@ -21,10 +33,13 @@ produce something to write.
 ## Process
 
 ### 1. Gather data
-For every note in `Published-Posts/`, read its metadata (category, format,
+For every note in `Published-Posts/` whose `platform` field matches this
+run's argument (default `linkedin`), read its metadata (category, format,
 length, hook_style, hashtags, posting day/time) and its linked
 `Analytics/` snapshot history (latest values, and trend across snapshots
-if there are several).
+if there are several). For `substack`, treat Articles and Notes as separate
+populations throughout steps 1-4 — don't average a 2,000-word article's
+metrics against a one-line Note's.
 
 ### 2. Look for patterns, only where the evidence bar is met
 Compare average `engagementRate` (and other metrics where meaningful)
@@ -36,11 +51,14 @@ hashtag set. A pattern is reportable only if:
   but a marginal 5% difference on n=3 is not a rule — say so).
 
 ### 3. Update the Playbook
-For each pattern meeting the bar, add or update a row in
-`Content-Learnings/playbook.md`'s Best-Performing Patterns or
-Anti-Patterns table: the rule in plain language, the evidence (post ids),
-a confidence level (`low` for n=3-4, `medium` for n=5-9, `high` for n=10+),
-and today's date. Bump `version` and `last_updated` in the frontmatter.
+For each pattern meeting the bar, add or update a row in this run's target
+playbook file (`playbook.md` / `playbook-x.md` / `playbook-substack.md`,
+per the `platform` argument) — its Best-Performing Patterns or
+Anti-Patterns table (for `substack`, the Articles or Notes variant of
+those tables specifically): the rule in plain language, the evidence (post
+ids), a confidence level (`low` for n=3-4, `medium` for n=5-9, `high` for
+n=10+), and today's date. Bump `version` and `last_updated` in that file's
+frontmatter — never another platform's file.
 
 If a previously-recorded rule is contradicted by newer data, update or
 remove it rather than leaving stale, wrong guidance in place — note the

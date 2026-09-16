@@ -2,10 +2,12 @@
 id: YYYY-MM-DD--kebab-slug
 type: draft
 idea_id: ""
+platform: linkedin # linkedin | x | substack-note
 category: ""
 format: ""
 hook_style: ""
 hashtags: []
+thread: []       # X threads only: ordered list of tweet segments (each its own string). Leave empty for a single-post draft — the ## Post Text body is the full post either way.
 visual_ids: []
 sources: []      # ids of research notes backing factual claims in this draft
 viral_score: 0   # 0-10, pre-publish quality gate score

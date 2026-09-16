@@ -25,6 +25,19 @@ row without a deliberate reason.
   `suggested_visual` (or is otherwise clearly visual-worthy) and no linked
   visual note yet.
 
+## Platform scope
+
+This skill is genuinely platform-agnostic — it already just produces one
+image-generation prompt for a piece of post text, regardless of where the
+post is headed. It covers LinkedIn, X (single posts and threads — for a
+thread, brief the hook tweet's concept unless a different tweet is clearly
+the visual anchor), and Substack Notes. Read the draft's `platform` field
+and copy the new Visual-Brief-Note's `platform` field from it, and use it
+only to pick the right aspect-ratio guidance in step 4 below. **Substack
+Articles are out of scope for this skill** — long-form pieces needing
+multiple section-tagged images go through `/generate-visual-substack-article`
+instead, once that skill exists.
+
 ## Process
 
 ### 1. Decide if a visual is warranted
@@ -69,10 +82,14 @@ Copy `_Templates/Visual-Brief-Note.md` into `Visuals/` as
   for ChatGPT Images, written specifically for this post, explicitly
   covering: subject, concept, composition, perspective/environment, visual
   hierarchy, lighting, mood, color direction, typography (exact in-image
-  text strings if any must render), and the target aspect ratio — map
-  LinkedIn's feed guidance (1200×627 landscape or 1080×1080 square) to the
+  text strings if any must render), and the target aspect ratio. Map to the
   nearest size ChatGPT Images actually accepts, and say so plainly rather
-  than asserting an exact match. This prompt should need minimal or no
+  than asserting an exact match — the reference dimensions differ by
+  `platform`: LinkedIn feed images commonly work at 1200×627 (landscape) or
+  1080×1080 (square); X images work well at the same two shapes (1200×675
+  or 1080×1080); a Substack Note image follows X's shapes since it renders
+  in a similar social-feed context. Verify current platform image guidance
+  before finalizing if it's been a while — these specs can change. This prompt should need minimal or no
   further editing before being pasted in.
 - **`## Why this visual`**: one sentence on what it adds beyond the text.
 

@@ -5,11 +5,12 @@
 config/secrets.*
 *.token
 
-# Generated content — personal LinkedIn pipeline output, not code/templates
+# Generated content — personal LinkedIn/X/Substack pipeline output, not code/templates
 Content-Research/
 Post-Ideas/
 Drafts/
 Scheduled/
+Substack-Ready/
 Visuals/
 Analytics/
 Published-Posts/
@@ -23,6 +24,10 @@ SKILLS.md
 
 # Editor/vault-local settings
 .obsidian/
+.DS_Store
 
 # MCP server deps
 mcp-server/node_modules/
+
+# Python
+scripts/__pycache__/

@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+"""
+Unit tests for scripts/validate_vault.py. Stdlib only (unittest), no
+dependency on the real vault contents — every fixture is a temp file, so
+this is safe to run anytime without touching real notes.
+
+Usage:
+    python3 scripts/test_validate_vault.py
+"""
+
+from __future__ import annotations
+
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import validate_vault as vv  # noqa: E402
+
+
+def spec_by(type_name: str, folder: str) -> vv.NoteSpec:
+    for spec in vv.SPECS:
+        if spec.type_name == type_name and spec.folder == folder:
+            return spec
+    raise AssertionError(f"no spec for type={type_name!r} folder={folder!r}")
+
+
+DRAFT_SPEC = spec_by("draft", "Drafts")
+SUBSTACK_ARTICLE_SPEC = spec_by("substack-article", "Drafts")
+
+
+def write_note(tmp_dir: Path, stem: str, frontmatter: str, body: str = "content\n") -> Path:
+    path = tmp_dir / f"{stem}.md"
+    path.write_text(f"---\n{frontmatter}\n---\n\n{body}", encoding="utf-8")
+    return path
+
+
+class ParseFrontmatterTests(unittest.TestCase):
+    def test_scalars_and_quoted_strings(self):
+        data, body = vv.parse_frontmatter(
+            '---\nid: 2026-01-01--x\ntitle: "Hello: World"\ncount: 3\n---\nBody text\n'
+        )
+        self.assertEqual(data["id"], "2026-01-01--x")
+        self.assertEqual(data["title"], "Hello: World")
+        self.assertEqual(data["count"], "3")
+        self.assertEqual(body.strip(), "Body text")
+
+    def test_inline_empty_list(self):
+        data, _ = vv.parse_frontmatter("---\nhashtags: []\n---\n")
+        self.assertTrue(vv.is_inline_empty_list(data["hashtags"]))
+
+    def test_block_list(self):
+        data, _ = vv.parse_frontmatter(
+            "---\nsources:\n  - 2026-01-01--a\n  - 2026-01-02--b\n---\n"
+        )
+        self.assertEqual(vv.list_entry_count(data["sources"]), 2)
+
+    def test_no_frontmatter_returns_none(self):
+        data, _ = vv.parse_frontmatter("just a markdown file\n")
+        self.assertIsNone(data)
+
+    def test_inline_comment_stripped_but_not_inside_quotes(self):
+        data, _ = vv.parse_frontmatter(
+            '---\nformat: educational # a comment\ntitle: "value # not a comment"\n---\n'
+        )
+        self.assertEqual(data["format"], "educational")
+        self.assertEqual(data["title"], "value # not a comment")
+
+
+class ValidateNoteDraftTests(unittest.TestCase):
+    """Covers the bug fixed 2026-09-14: hashtags: [] must be accepted for
+    platform: x / substack-note, not just present-but-nonempty as LinkedIn
+    drafts require by convention (enforced by write-draft, not the vault
+    schema)."""
+
+    def _minimal_draft_frontmatter(self, platform: str, hashtags: str) -> str:
+        return (
+            "id: 2026-01-01--example\n"
+            "type: draft\n"
+            "idea_id: 2026-01-01--idea\n"
+            f"platform: {platform}\n"
+            "category: AI\n"
+            "format: ai-tech\n"
+            "hook_style: test\n"
+            f"hashtags: {hashtags}\n"
+            "visual_ids: []\n"
+            "sources:\n"
+            "  - 2026-01-01--research\n"
+            "viral_score: 7.0\n"
+            "status: in_review\n"
+            "history:\n"
+            "  - action: created\n"
+        )
+
+    def test_x_draft_with_empty_hashtags_is_valid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter("x", "[]"),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_substack_note_draft_with_empty_hashtags_is_valid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter("substack-note", "[]"),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_linkedin_draft_with_hashtags_still_valid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter("linkedin", '["#AI", "#ML"]'),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_linkedin_draft_with_empty_hashtags_no_longer_errors(self):
+        # Documents the deliberate post-fix behavior: the vault schema no
+        # longer enforces "hashtags must be non-empty" for any platform —
+        # that convention now lives in write-draft's own hard rules.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter("linkedin", "[]"),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_empty_sources_still_errors(self):
+        # Regression check: the fix only touched `hashtags`, not the other
+        # nonempty_list_keys.
+        fm = self._minimal_draft_frontmatter("x", "[]").replace(
+            "sources:\n  - 2026-01-01--research\n", "sources: []\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-01-01--example", fm)
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(
+                any("sources" in m for m in messages),
+                f"expected a 'sources' error, got: {messages}",
+            )
+
+    def test_missing_required_field_errors(self):
+        fm = self._minimal_draft_frontmatter("x", "[]").replace("category: AI\n", "")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-01-01--example", fm)
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("category" in m for m in messages), messages)
+
+    def test_invalid_platform_value_errors(self):
+        fm = self._minimal_draft_frontmatter("bluesky", "[]")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-01-01--example", fm)
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("platform" in m for m in messages), messages)
+
+    def test_invalid_category_errors(self):
+        fm = self._minimal_draft_frontmatter("x", "[]").replace(
+            "category: AI\n", "category: NotAPillar\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-01-01--example", fm)
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("pillar" in m for m in messages), messages)
+
+    def test_placeholder_status_skips_content_checks(self):
+        # A placeholder with an invalid platform/empty sources should only
+        # be flagged for missing required *keys*, never content emptiness.
+        fm = self._minimal_draft_frontmatter("x", "[]").replace(
+            "sources:\n  - 2026-01-01--research\n", "sources: []\n"
+        ).replace("status: in_review\n", "status: placeholder\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-01-01--example", fm)
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_draft_frontmatter("x", "[]").replace(
+            "id: 2026-01-01--example\n", "id: 2026-01-01--different\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-01-01--example", fm)
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
+class RouteNoteSpecTests(unittest.TestCase):
+    """Covers the multi-spec-per-folder routing added alongside the
+    Substack expansion (Drafts/ now holds both `draft` and
+    `substack-article` notes)."""
+
+    def test_single_spec_folder_ignores_type_content(self):
+        # A folder with exactly one spec (e.g. Post-Ideas/) must keep
+        # matching regardless of what `type` says — this is the
+        # pre-existing behavior for every non-Drafts/non-Published-Posts
+        # folder and must not regress.
+        idea_spec = spec_by("idea", "Post-Ideas")
+        match = vv.route_note_spec({"type": "something-else"}, [idea_spec])
+        self.assertIs(match, idea_spec)
+
+    def test_routes_draft_type_to_draft_spec(self):
+        match = vv.route_note_spec(
+            {"type": "draft"}, [DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC]
+        )
+        self.assertIs(match, DRAFT_SPEC)
+
+    def test_routes_substack_article_type_to_its_spec(self):
+        match = vv.route_note_spec(
+            {"type": "substack-article"}, [DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC]
+        )
+        self.assertIs(match, SUBSTACK_ARTICLE_SPEC)
+
+    def test_unrecognized_type_returns_none(self):
+        match = vv.route_note_spec(
+            {"type": "carousel"}, [DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC]
+        )
+        self.assertIsNone(match)
+
+    def test_missing_type_returns_none_in_multi_spec_folder(self):
+        match = vv.route_note_spec({}, [DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC])
+        self.assertIsNone(match)
+
+
+class GroupSpecsByFolderTests(unittest.TestCase):
+    def test_drafts_folder_has_two_specs(self):
+        by_folder = vv.group_specs_by_folder(vv.SPECS)
+        self.assertEqual(len(by_folder["Drafts"]), 2)
+        type_names = {s.type_name for s in by_folder["Drafts"]}
+        self.assertEqual(type_names, {"draft", "substack-article"})
+
+    def test_published_posts_folder_has_two_specs(self):
+        by_folder = vv.group_specs_by_folder(vv.SPECS)
+        self.assertEqual(len(by_folder["Published-Posts"]), 2)
+        type_names = {s.type_name for s in by_folder["Published-Posts"]}
+        self.assertEqual(type_names, {"post", "substack-ready"})
+
+
+if __name__ == "__main__":
+    unittest.main()

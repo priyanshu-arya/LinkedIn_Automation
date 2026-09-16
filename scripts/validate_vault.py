@@ -32,6 +32,11 @@ PILLARS = {
     "Research-Papers", "Psychology-AI", "AI-Healthcare", "Resources",
 }
 
+# Single-value `platform` field, checked when a spec sets platform_key.
+# (Idea Notes carry a plural `platforms: []` instead — not deeply validated
+# here, since this parser doesn't parse inline YAML lists into items.)
+PLATFORMS = {"linkedin", "x", "substack-article", "substack-note"}
+
 ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}--[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -46,6 +51,7 @@ class NoteSpec:
     status_key: str | None
     status_enum: set[str] | None
     category_key: str | None  # checked against PILLARS if present
+    platform_key: str | None = None  # checked against PLATFORMS if present
 
 
 SPECS = [
@@ -86,11 +92,33 @@ SPECS = [
                         "viral_score", "status", "history"],
         nonempty_scalar_keys=["id", "type", "idea_id", "category", "format",
                                "hook_style", "status"],
-        nonempty_list_keys=["hashtags", "sources", "history"],
+        # `hashtags` deliberately excluded from nonempty_list_keys: it's a
+        # required *field* (must be present) but its correct value is an
+        # empty list for platform: x / substack-note (0-2 or no hashtags by
+        # design, see voice-guide-x.md/voice-guide-substack.md) — only
+        # LinkedIn's write-draft convention (3-5 tags) treats it as
+        # never-empty, and that's enforced by that skill's own hard rules,
+        # not a vault-wide schema requirement.
+        nonempty_list_keys=["sources", "history"],
         status_key="status",
         status_enum={"draft", "in_review", "approved", "rejected",
                       "placeholder"},
         category_key="category",
+        platform_key="platform",
+    ),
+    NoteSpec(
+        "substack-article", "Drafts", False,
+        required_keys=["id", "type", "platform", "idea_id", "category",
+                        "title", "seo_description", "sources", "viral_score",
+                        "status", "history"],
+        nonempty_scalar_keys=["id", "type", "platform", "idea_id",
+                               "category", "title", "status"],
+        nonempty_list_keys=["sources", "history"],
+        status_key="status",
+        status_enum={"draft", "in_review", "approved", "rejected",
+                      "placeholder"},
+        category_key="category",
+        platform_key="platform",
     ),
     NoteSpec(
         "visual", "Visuals", False,
@@ -102,6 +130,7 @@ SPECS = [
         status_key="status",
         status_enum={"brief", "generated", "placeholder"},
         category_key=None,
+        platform_key="platform",
     ),
     NoteSpec(
         "post", "Scheduled", False,
@@ -116,6 +145,7 @@ SPECS = [
         status_key="publish_status",
         status_enum={"scheduled", "published", "failed", "placeholder"},
         category_key="category",
+        platform_key="platform",
     ),
     NoteSpec(
         "post", "Published-Posts", False,
@@ -131,6 +161,32 @@ SPECS = [
         status_key="publish_status",
         status_enum={"scheduled", "published", "failed", "placeholder"},
         category_key="category",
+        platform_key="platform",
+    ),
+    NoteSpec(
+        "substack-ready", "Substack-Ready", False,
+        required_keys=["id", "type", "draft_id", "platform",
+                        "publish_status", "category", "format", "sources"],
+        nonempty_scalar_keys=["id", "type", "draft_id", "platform",
+                               "publish_status", "category"],
+        nonempty_list_keys=[],
+        status_key="publish_status",
+        status_enum={"ready_to_publish", "published", "placeholder"},
+        category_key="category",
+        platform_key="platform",
+    ),
+    NoteSpec(
+        "substack-ready", "Published-Posts", False,
+        required_keys=["id", "type", "draft_id", "platform",
+                        "publish_status", "category", "format", "sources"],
+        nonempty_scalar_keys=["id", "type", "draft_id", "platform",
+                               "publish_status", "category",
+                               "publish_confirmed_date"],
+        nonempty_list_keys=[],
+        status_key="publish_status",
+        status_enum={"ready_to_publish", "published", "placeholder"},
+        category_key="category",
+        platform_key="platform",
     ),
     NoteSpec(
         "analytics", "Analytics", False,
@@ -140,6 +196,7 @@ SPECS = [
         status_key="status",
         status_enum={"active", "placeholder"},
         category_key=None,
+        platform_key="platform",
     ),
     NoteSpec(
         "profile-optimization", "Profile-Optimization", False,
@@ -288,6 +345,14 @@ def validate_note(path: Path, spec: NoteSpec) -> list[Issue]:
                 f"'{spec.category_key}: {cat}' is not one of the 16 fixed pillar folders",
             ))
 
+    if spec.platform_key and spec.platform_key in data:
+        plat = str(data[spec.platform_key]).strip()
+        if plat and plat not in PLATFORMS:
+            issues.append(Issue(
+                "ERROR", path,
+                f"'{spec.platform_key}: {plat}' is not one of {sorted(PLATFORMS)}",
+            ))
+
     note_id = str(data.get("id", "")).strip()
     if note_id:
         if not ID_RE.match(note_id):
@@ -305,12 +370,32 @@ def validate_note(path: Path, spec: NoteSpec) -> list[Issue]:
     return issues
 
 
-def iter_notes(spec: NoteSpec) -> list[Path]:
-    base = ROOT / spec.folder
+def iter_notes(folder: str, recursive: bool) -> list[Path]:
+    base = ROOT / folder
     if not base.exists():
         return []
-    pattern = "**/*.md" if spec.recursive else "*.md"
+    pattern = "**/*.md" if recursive else "*.md"
     return sorted(p for p in base.glob(pattern) if p.is_file())
+
+
+def group_specs_by_folder(specs: list[NoteSpec]) -> dict[str, list[NoteSpec]]:
+    by_folder: dict[str, list[NoteSpec]] = {}
+    for spec in specs:
+        by_folder.setdefault(spec.folder, []).append(spec)
+    return by_folder
+
+
+def route_note_spec(data: dict | None, specs: list[NoteSpec]) -> NoteSpec | None:
+    """Pick which of a folder's specs a note belongs to, by its `type`
+    field. A folder with exactly one spec always matches it, regardless of
+    `type` content (preserves pre-multi-spec behavior for single-shape
+    folders). A folder with several specs (e.g. Drafts/ holding both plain
+    `draft` and `substack-article` notes) requires `type` to name one of
+    them; returns None if it doesn't (caller reports that as an error)."""
+    if len(specs) == 1:
+        return specs[0]
+    note_type = str(data.get("type", "")).strip() if data else ""
+    return next((s for s in specs if s.type_name == note_type), None)
 
 
 def main() -> int:
@@ -318,10 +403,28 @@ def main() -> int:
     all_issues: list[Issue] = []
     checked = 0
 
-    for spec in SPECS:
-        for path in iter_notes(spec):
+    # Group specs by folder — a folder with >1 spec (e.g. Drafts/ holding
+    # both plain `draft` and `substack-article` notes) routes each note by
+    # its own `type` field rather than assuming one schema per folder.
+    specs_by_folder = group_specs_by_folder(SPECS)
+
+    for folder, specs in specs_by_folder.items():
+        recursive = any(s.recursive for s in specs)
+        for path in iter_notes(folder, recursive):
             checked += 1
-            all_issues.extend(validate_note(path, spec))
+            data = None
+            if len(specs) > 1:
+                text = path.read_text(encoding="utf-8", errors="replace")
+                data, _ = parse_frontmatter(text)
+            match = route_note_spec(data, specs)
+            if match is None:
+                all_issues.append(Issue(
+                    "ERROR", path,
+                    f"Unrecognized or missing 'type' for a note in {folder}/ "
+                    f"(expected one of {sorted(s.type_name for s in specs)})",
+                ))
+                continue
+            all_issues.extend(validate_note(path, match))
 
     errors = [i for i in all_issues if i.level == "ERROR"]
     warnings = [i for i in all_issues if i.level == "WARN"]

@@ -2,6 +2,7 @@
 id: YYYY-MM-DD--kebab-slug
 type: visual
 draft_id: ""
+platform: linkedin # linkedin | x | substack-article | substack-note — drives aspect-ratio guidance below
 format: "" # infographic | cheat-sheet | diagram | comparison | framework-graphic | quote-card | carousel | architecture-diagram
 provider: none # none (brief-only) | <provider name once wired>
 image_path: "" # filled once a real provider generates an actual file

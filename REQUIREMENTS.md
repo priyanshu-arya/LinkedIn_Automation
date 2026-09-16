@@ -2,7 +2,7 @@
 
 Status: **Draft — requirements captured, no implementation started.**
 Owner: Priyanshu Arya
-Last updated: 2026-09-09
+Last updated: 2026-09-14 (§25 added: multi-platform expansion to X and Substack)
 
 ---
 
@@ -378,3 +378,98 @@ but it is not required for v1.
   monitoring, notifications) — local machine on a schedule, or a server?
 - Definition of "significantly outperforms normal" for the notification
   trigger (needs a baseline once there's post history).
+
+---
+
+## 25. Multi-Platform Expansion: X (Twitter) and Substack
+
+Added 2026-09-14, once the LinkedIn pipeline above was working end to end.
+Extends the same research → idea → draft → critique → visual → approval →
+publish → analyze → learn loop to X and Substack, reusing whatever is
+genuinely platform-agnostic and building fresh only where a platform's
+format or publishing mechanism actually differs. Full architecture
+rationale: [DECISIONS.md — Multi-Platform Expansion (X + Substack)
+decisions](DECISIONS.md#multi-platform-expansion-x--substack-decisions).
+
+### 25.1 Shared research and idea pool
+
+**No separate research pipeline per platform.** §2's live, real-time,
+never-hardcoded research discipline stays exactly as specified — it simply
+now feeds three platforms instead of one. An Idea Note (§4) gains a
+`platforms: []` field naming which platform(s) it's eligible for; each
+platform's own writer produces its own draft from the idea independently —
+never a copy-pasted adaptation of another platform's draft. Because one
+idea can carry different assigned dates on different platforms, ideas also
+gain a `platform_schedule: []` field for every platform except LinkedIn,
+which keeps using the original `target_week`/`target_date` fields
+unchanged.
+
+### 25.2 X (Twitter)
+
+- **Cadence:** ~5/week by default, mix of single posts and threads decided
+  per-idea by the writer from the idea's actual depth — never a fixed
+  singles/threads split, and never padded to hit the number (same hard
+  rule as §5).
+- **Format:** a single post stays well under X's per-post character limit;
+  a thread is written as an ordered sequence where the first tweet must
+  stand alone as a hook. Hashtags: 0–2 (much lighter than LinkedIn's 3–5),
+  omitted by default rather than forced.
+- **Posting-time heuristic:** sourced live from current X best-time
+  research the first time weekly planning runs for this platform — not
+  assumed to match LinkedIn's IST/Tue-Thu-Sat table, since audience
+  behavior differs. Same "unvalidated starting point until real evidence
+  exists" framing as §11.
+- **Scheduling:** via the same Buffer account already used for LinkedIn,
+  a separate connected channel. Single-post scheduling reuses the proven
+  `createPost` mutation. **Thread-posting's mutation shape is not assumed**
+  — it must be confirmed against Buffer's live GraphQL schema/error
+  responses before the first real thread is scheduled, the same discipline
+  that caught the original LinkedIn scheduler's `channelId` type
+  correction (§9/Phase 8).
+- **Analytics & playbook:** same Buffer metrics pull as LinkedIn, scoped to
+  the X channel, feeding a separate `playbook-x.md` — a pattern proven on
+  LinkedIn is not assumed to transfer to X.
+
+### 25.3 Substack (Articles and Notes)
+
+Two distinct formats under one platform:
+
+- **Articles:** long-form (title, subtitle, sectioned body), no character
+  ceiling — length is governed by the material, not a target. Default
+  cadence 1/week, and only for ideas that genuinely earn full-length
+  treatment; an empty slot in a given week is a correct, honest outcome.
+  Critiqued on structure/depth/SEO fit rather than a scroll-stopping hook
+  (§14's Viral Potential Score framing still applies, just reweighted for
+  the format). Visuals may be multiple per piece, one per section that
+  genuinely needs one, unlike the single-image LinkedIn/X norm.
+- **Notes:** short-form, casual, conversational — closer to X's brevity
+  than LinkedIn's polish, no hashtag convention. Default cadence ~3/week.
+
+**Publishing is manual by design, not a missing feature.** Buffer has no
+Substack channel, and Substack has no supported public posting API. An
+unofficial, session-cookie-based API was explicitly considered and rejected
+(ToS risk, undocumented, could break silently) in favor of the same
+deliberate-manual precedent this pipeline already uses for image generation
+(§7): the system produces a finished, copy-ready deliverable, and a human
+performs the actual publish action. The system never marks something
+`published` without the user's explicit confirmation that run — no
+assuming publication happened just because time passed.
+
+**Analytics** have no automated pull (no API) — §12's metrics get entered
+manually from the user's own Substack dashboard when available, same
+never-fabricate discipline as everywhere else in this spec (§21): a number
+not actually obtained is left blank, never estimated. Playbook evidence
+(§13) accumulates in `playbook-substack.md`, tracking Articles and Notes as
+separate populations rather than averaging a 2,000-word piece against a
+one-line Note.
+
+### 25.4 Guardrails unchanged
+
+§8 (no auto-publish without human approval), §15 (duplicate/fatigue
+detection), §17 (source/citation retention), and §21 (never fabricate,
+opinion/fact separation) all apply identically per platform. The
+`content-index.md` fast-lookup table (§13/§15 machinery) gains a `platform`
+column so cross-platform dedup and fatigue checks share one index instead
+of three, while the underlying per-platform playbooks and voice guides stay
+separate — evidence and voice do not transfer across platforms by
+assumption.

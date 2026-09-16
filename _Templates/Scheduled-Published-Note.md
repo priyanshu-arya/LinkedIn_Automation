@@ -2,6 +2,7 @@
 id: YYYY-MM-DD--kebab-slug
 type: post   # post (use both while Scheduled, move file to Published-Posts/ on confirmed publish)
 draft_id: ""
+platform: linkedin # linkedin | x — Buffer-scheduled platforms only; Substack uses Substack-Ready-Note.md instead
 final_text: ""
 buffer_post_id: ""
 scheduled_date: YYYY-MM-DD
