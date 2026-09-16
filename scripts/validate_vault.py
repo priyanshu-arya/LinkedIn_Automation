@@ -52,6 +52,18 @@ class NoteSpec:
     status_enum: set[str] | None
     category_key: str | None  # checked against PILLARS if present
     platform_key: str | None = None  # checked against PLATFORMS if present
+    # When True, and this spec shares a folder with other specs, a note in
+    # that folder whose `type` matches none of the folder's registered
+    # specs is silently left unvalidated instead of reported as an error.
+    # Content-Learnings/ holds several living-doc types (`playbook`,
+    # `voice-guide`) that have never had a NoteSpec of their own and were
+    # never meant to be strictly validated — only specific opted-in types
+    # (`story-bank`, `hook-formulas`) are. Folders like Drafts/ and
+    # Published-Posts/ leave this False (the default): every real note
+    # there is expected to match one of the folder's registered types, so
+    # an unmatched type is a real error (e.g. a missing/typo'd `type`
+    # field), not an intentionally-unvalidated file.
+    permissive_folder: bool = False
 
 
 SPECS = [
@@ -217,7 +229,12 @@ SPECS = [
     # the note's frontmatter. Note: no NoteSpec previously existed for
     # playbook.md/voice-guide.md either — Content-Learnings/ wasn't
     # validated at all before this entry; this adds validation scoped only
-    # to `type: story-bank`.
+    # to `type: story-bank`. `permissive_folder=True` because Content-
+    # Learnings/ now (as of Phase 16) holds a second registered type
+    # (`hook-formulas`) alongside several unregistered ones (`playbook`,
+    # `voice-guide`) — those must stay silently unvalidated, not start
+    # erroring, once this folder has more than one spec (see
+    # `permissive_folder`'s definition on NoteSpec above).
     NoteSpec(
         "story-bank", "Content-Learnings", False,
         required_keys=["id", "type", "version", "last_updated"],
@@ -226,6 +243,23 @@ SPECS = [
         status_key=None,
         status_enum=None,
         category_key=None,
+        permissive_folder=True,
+    ),
+    # Added Phase 16 (Hook Extractor). Same single-living-doc shape as
+    # story-bank.md above — see Content-Learnings/hook-formulas.md's own
+    # header. This is the second registered spec for Content-Learnings/,
+    # which is what makes that folder route by `type` instead of the old
+    # single-spec-always-matches shortcut; permissive_folder=True for the
+    # same reason as story-bank's entry above.
+    NoteSpec(
+        "hook-formulas", "Content-Learnings", False,
+        required_keys=["id", "type", "version", "last_updated"],
+        nonempty_scalar_keys=["id", "type", "version", "last_updated"],
+        nonempty_list_keys=[],
+        status_key=None,
+        status_enum=None,
+        category_key=None,
+        permissive_folder=True,
     ),
 ]
 
@@ -415,6 +449,14 @@ def route_note_spec(data: dict | None, specs: list[NoteSpec]) -> NoteSpec | None
     return next((s for s in specs if s.type_name == note_type), None)
 
 
+def is_permissive_folder(specs: list[NoteSpec]) -> bool:
+    """True if an unmatched `type` in this folder should be silently
+    skipped rather than reported as an error (see `permissive_folder` on
+    NoteSpec). Any spec in the folder opting in is enough — the folder is
+    the real unit here, all specs sharing one folder are expected to agree."""
+    return any(s.permissive_folder for s in specs)
+
+
 def main() -> int:
     quiet = "--quiet" in sys.argv
     all_issues: list[Issue] = []
@@ -435,6 +477,10 @@ def main() -> int:
                 data, _ = parse_frontmatter(text)
             match = route_note_spec(data, specs)
             if match is None:
+                if is_permissive_folder(specs):
+                    # Intentionally unvalidated file type in this folder
+                    # (e.g. Content-Learnings/playbook.md) — not an error.
+                    continue
                 all_issues.append(Issue(
                     "ERROR", path,
                     f"Unrecognized or missing 'type' for a note in {folder}/ "

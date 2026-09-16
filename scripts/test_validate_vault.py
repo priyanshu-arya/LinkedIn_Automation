@@ -202,6 +202,7 @@ class ValidateNoteDraftTests(unittest.TestCase):
 
 
 STORY_BANK_SPEC = spec_by("story-bank", "Content-Learnings")
+HOOK_FORMULAS_SPEC = spec_by("hook-formulas", "Content-Learnings")
 
 
 class ValidateNoteStoryBankTests(unittest.TestCase):
@@ -261,6 +262,50 @@ class ValidateNoteStoryBankTests(unittest.TestCase):
             self.assertTrue(any("filename stem" in m for m in messages), messages)
 
 
+class ValidateNoteHookFormulasTests(unittest.TestCase):
+    """Covers the Phase 16 (Hook Extractor) hook-formulas NoteSpec: the
+    second registered spec for Content-Learnings/, added alongside
+    story-bank — same single-living-doc shape, no `status` field."""
+
+    def _minimal_hook_formulas_frontmatter(self, last_updated: str = "2026-09-17") -> str:
+        return (
+            "id: hook-formulas\n"
+            "type: hook-formulas\n"
+            "version: 1\n"
+            f"last_updated: {last_updated}\n"
+        )
+
+    def test_valid_hook_formulas_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "hook-formulas",
+                self._minimal_hook_formulas_frontmatter(),
+            )
+            issues = vv.validate_note(path, HOOK_FORMULAS_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_last_updated_field_errors(self):
+        fm = self._minimal_hook_formulas_frontmatter().replace(
+            "last_updated: 2026-09-17\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "hook-formulas", fm)
+            issues = vv.validate_note(path, HOOK_FORMULAS_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("last_updated" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_hook_formulas_frontmatter().replace(
+            "id: hook-formulas\n", "id: hook-formulas-wrong\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "hook-formulas", fm)
+            issues = vv.validate_note(path, HOOK_FORMULAS_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
 class RouteNoteSpecTests(unittest.TestCase):
     """Covers the multi-spec-per-folder routing added alongside the
     Substack expansion (Drafts/ now holds both `draft` and
@@ -297,6 +342,70 @@ class RouteNoteSpecTests(unittest.TestCase):
         match = vv.route_note_spec({}, [DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC])
         self.assertIsNone(match)
 
+    def test_routes_story_bank_type_to_story_bank_spec(self):
+        # Content-Learnings/ became multi-spec in Phase 16 (hook-formulas
+        # added alongside story-bank) — same by-type routing must apply.
+        match = vv.route_note_spec(
+            {"type": "story-bank"}, [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC]
+        )
+        self.assertIs(match, STORY_BANK_SPEC)
+
+    def test_routes_hook_formulas_type_to_hook_formulas_spec(self):
+        match = vv.route_note_spec(
+            {"type": "hook-formulas"}, [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC]
+        )
+        self.assertIs(match, HOOK_FORMULAS_SPEC)
+
+    def test_unmatched_type_in_content_learnings_returns_none(self):
+        # playbook.md / voice-guide.md carry `type: playbook` / `type:
+        # voice-guide` — neither matches either registered spec.
+        match = vv.route_note_spec(
+            {"type": "playbook"}, [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC]
+        )
+        self.assertIsNone(match)
+
+
+class PermissiveFolderTests(unittest.TestCase):
+    """Covers the fix for the regression Phase 15's report flagged: once
+    Content-Learnings/ gained a second registered spec (hook-formulas,
+    Phase 16), the pre-existing single-spec-per-folder shortcut no longer
+    protects files like playbook.md/voice-guide.md, which carry a `type`
+    that matches neither registered spec. `permissive_folder` makes an
+    unmatched type in such a folder a silent skip, not a new error,
+    while Drafts/-style folders (where every real note is expected to
+    match a registered type) keep erroring on an unmatched type."""
+
+    def test_content_learnings_specs_are_permissive(self):
+        self.assertTrue(vv.is_permissive_folder([STORY_BANK_SPEC, HOOK_FORMULAS_SPEC]))
+
+    def test_drafts_specs_are_not_permissive(self):
+        self.assertFalse(vv.is_permissive_folder([DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC]))
+
+    def test_single_spec_folder_permissiveness_is_irrelevant(self):
+        # Doesn't matter either way for single-spec folders, since
+        # route_note_spec never returns None for them in the first place —
+        # documented here so the invariant is explicit, not assumed.
+        idea_spec = spec_by("idea", "Post-Ideas")
+        match = vv.route_note_spec({"type": "anything"}, [idea_spec])
+        self.assertIsNotNone(match)
+
+    def test_unmatched_type_in_permissive_folder_is_not_an_error(self):
+        # End-to-end: playbook.md-shaped note in a Content-Learnings-shaped
+        # multi-spec folder must route to None *and* be treated as a skip,
+        # not surfaced as an "unrecognized type" error.
+        specs = [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC]
+        data = {"type": "playbook"}
+        match = vv.route_note_spec(data, specs)
+        self.assertIsNone(match)
+        self.assertTrue(vv.is_permissive_folder(specs))
+
+    def test_unmatched_type_in_non_permissive_folder_stays_an_error(self):
+        specs = [DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC]
+        data = {"type": "carousel"}
+        match = vv.route_note_spec(data, specs)
+        self.assertIsNone(match)
+        self.assertFalse(vv.is_permissive_folder(specs))
+
 
 class GroupSpecsByFolderTests(unittest.TestCase):
     def test_drafts_folder_has_two_specs(self):
@@ -310,6 +419,14 @@ class GroupSpecsByFolderTests(unittest.TestCase):
         self.assertEqual(len(by_folder["Published-Posts"]), 2)
         type_names = {s.type_name for s in by_folder["Published-Posts"]}
         self.assertEqual(type_names, {"post", "substack-ready"})
+
+    def test_content_learnings_folder_has_two_specs(self):
+        # Was single-spec through Phase 15; Phase 16 (Hook Extractor) adds
+        # hook-formulas alongside story-bank.
+        by_folder = vv.group_specs_by_folder(vv.SPECS)
+        self.assertEqual(len(by_folder["Content-Learnings"]), 2)
+        type_names = {s.type_name for s in by_folder["Content-Learnings"]}
+        self.assertEqual(type_names, {"story-bank", "hook-formulas"})
 
 
 if __name__ == "__main__":
