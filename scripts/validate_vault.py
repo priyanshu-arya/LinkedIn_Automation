@@ -210,6 +210,23 @@ SPECS = [
         status_enum={"draft", "delivered", "placeholder"},
         category_key=None,
     ),
+    # Single living doc (same pattern as Content-Learnings/playbook.md,
+    # REQUIREMENTS.md §13/§26) — no `status` field on this note type, so
+    # status_key is None and every row-level placeholder-vs-real distinction
+    # lives inside the note's own tables (a `status` column per row), not on
+    # the note's frontmatter. Note: no NoteSpec previously existed for
+    # playbook.md/voice-guide.md either — Content-Learnings/ wasn't
+    # validated at all before this entry; this adds validation scoped only
+    # to `type: story-bank`.
+    NoteSpec(
+        "story-bank", "Content-Learnings", False,
+        required_keys=["id", "type", "version", "last_updated"],
+        nonempty_scalar_keys=["id", "type", "version", "last_updated"],
+        nonempty_list_keys=[],
+        status_key=None,
+        status_enum=None,
+        category_key=None,
+    ),
 ]
 
 
