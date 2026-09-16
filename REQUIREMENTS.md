@@ -569,3 +569,68 @@ this system's own publishing. If it wasn't acceptable to bypass ToS to
 **Every skill following this convention says so explicitly in its own
 SKILL.md** — a one-line cross-reference to this section — rather than
 re-stating the full rule inline.
+
+---
+
+## 28. Viral Hook Formulas, Founders Angles & Post Spines (Post Writer)
+
+Added 2026-09-17 (Phase 17). `/write-draft` (Post Writer) is reworked to
+pick a hook formula for every draft, optionally shape a draft around a
+founders angle, and — new alternative entry path — draft directly from a
+Story Bank Post Spine instead of an Idea Note. The existing idea-based flow
+remains the primary, default path; none of this weakens its
+research-grounding or no-fabrication rules.
+
+**Engagement goal — closed 5-value list.** Every draft is written toward
+exactly one engagement goal: **likes, comments, shares, saves,
+profile-visits**. No sixth value is ever introduced. Precedence for
+determining it: an explicit `--goal` argument > the idea's own goal field
+if set (idea path only) > a `playbook.md`-evidenced pattern for that
+category, if one exists > default `comments`.
+
+**Hook formula selection.** `/write-draft` reads `Content-Learnings/
+hook-formulas.md` (§ established at Phase 16) fresh on every run and
+selects a `status: canonical` row tagged for the chosen engagement goal (a
+row with no `engagement_goals` value is general-purpose, eligible for any
+goal). A `proposed` row is never selected for drafting — only human
+promotion to `canonical` makes a formula trustworthy for this purpose. The
+skill prefers a formula not used in the last ~5 drafts, checked via the
+Draft Note's new `hook_formula` frontmatter field, to avoid visibly
+repetitive openings — but goal-fit still wins over novelty when every
+eligible formula was recently used.
+
+**Founders angle — optional, fallback is to drop it, never fabricate.**
+`Content-Learnings/founders-angle-library.md` (new, Phase 17) is a second
+shared living doc in the same canonical/proposed pattern as
+`hook-formulas.md`, seeded with 10 angles adapted from
+`sergebulaev/linkedin-skills` (MIT). A founders angle reshapes a draft's
+*entire structure* (not just its opening line, unlike a hook formula) and
+is only ever considered for the Career / Interview Prep categories, or when
+the user explicitly asks for one. It is used only when a `canonical` angle's
+bracketed template slots can be filled from an actual, real
+`Content-Learnings/story-bank.md` row (a Receipt, Turning Point, Scar, or
+Defensible Position) that genuinely matches the topic — every bracket
+filled with a real value, cited by that row's `id`. If no real match
+exists, the angle is dropped for that draft entirely, and the skill says so
+explicitly when reporting back — never filled with an invented
+number/anecdote that merely looks real. This is the Story Bank's (§26)
+never-fabricate discipline extended to angle *selection*, not just
+fact-checking within a chosen angle.
+
+**New `--spine` entry path (alternative to an Idea Note).** `/write-draft
+--spine <spine_id>` drafts directly from a Post Spine row in
+`Content-Learnings/story-bank.md`'s `## Post Spines` table (§26), produced
+by `/interviewer`'s Mode B. The spine's `receipt_id`/`position_id`
+cross-references, when set, are this path's grounding, held to the exact
+same rigor as an idea's linked research notes — every claim traces back to
+the spine's own fields or the Story Bank rows it cites, and a spine that
+cross-references nothing may not have anything invented in its place. A
+draft from this path has no `idea_id` (so no idea `status` to flip to
+`drafted` afterward) — instead its Draft Note records `spine_id`, and its
+`sources` list cites the Story Bank row(s) actually used rather than a
+research note.
+
+**Draft Note schema.** `_Templates/Draft-Note.md` gains four new optional
+frontmatter fields, all empty-string by default so every previously
+written draft keeps validating unchanged: `hook_formula`,
+`engagement_goal`, `founders_angle`, `spine_id`.

@@ -37,6 +37,13 @@ PILLARS = {
 # here, since this parser doesn't parse inline YAML lists into items.)
 PLATFORMS = {"linkedin", "x", "substack-article", "substack-note"}
 
+# Single-value `engagement_goal` field (Draft Notes, Phase 17 Post Writer),
+# checked when a spec sets engagement_goal_key — same optional-if-present
+# pattern as PLATFORMS/platform_key below. Closed 5-value list per
+# REQUIREMENTS.md §28; the field itself is optional (blank on drafts written
+# before Phase 17), so this only fires when a value is actually present.
+ENGAGEMENT_GOALS = {"likes", "comments", "shares", "saves", "profile-visits"}
+
 ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}--[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -52,6 +59,17 @@ class NoteSpec:
     status_enum: set[str] | None
     category_key: str | None  # checked against PILLARS if present
     platform_key: str | None = None  # checked against PLATFORMS if present
+    # checked against ENGAGEMENT_GOALS if present (Phase 17 Post Writer);
+    # None for every spec except "draft", since only Draft Notes carry this
+    # field.
+    engagement_goal_key: str | None = None
+    # A pair of keys where exactly one must be non-empty (Phase 17 Post
+    # Writer's idea-path-vs-spine-path split): None for every spec except
+    # "draft", where it's ("idea_id", "spine_id") — an idea-drafted note
+    # sets idea_id and leaves spine_id blank, a spine-drafted note is the
+    # reverse, and a note setting both or neither is a real schema error,
+    # not a valid state either drafting path can produce.
+    exactly_one_of: tuple[str, str] | None = None
     # When True, and this spec shares a folder with other specs, a note in
     # that folder whose `type` matches none of the folder's registered
     # specs is silently left unvalidated instead of reported as an error.
@@ -102,7 +120,12 @@ SPECS = [
         required_keys=["id", "type", "idea_id", "category", "format",
                         "hook_style", "hashtags", "visual_ids", "sources",
                         "viral_score", "status", "history"],
-        nonempty_scalar_keys=["id", "type", "idea_id", "category", "format",
+        # `idea_id` stays in required_keys (the key must be present, even
+        # if blank on a spine-drafted note) but is deliberately NOT in
+        # nonempty_scalar_keys below — its own emptiness is checked, in
+        # combination with `spine_id`, by exactly_one_of instead. A note
+        # missing the key entirely is still a real schema error either way.
+        nonempty_scalar_keys=["id", "type", "category", "format",
                                "hook_style", "status"],
         # `hashtags` deliberately excluded from nonempty_list_keys: it's a
         # required *field* (must be present) but its correct value is an
@@ -111,12 +134,27 @@ SPECS = [
         # LinkedIn's write-draft convention (3-5 tags) treats it as
         # never-empty, and that's enforced by that skill's own hard rules,
         # not a vault-wide schema requirement.
+        #
+        # `hook_formula`, `engagement_goal`, and `founders_angle` (Phase 17
+        # Post Writer, REQUIREMENTS.md §28) are deliberately excluded from
+        # required_keys/nonempty_scalar_keys entirely — they are optional
+        # fields, blank by default, so every Draft Note written before this
+        # field existed keeps validating with zero changes. `engagement_goal`
+        # gets a closed-list check below (via engagement_goal_key) when it
+        # *is* present; `hook_formula` and `founders_angle` reference rows in
+        # living docs (hook-formulas.md/founders-angle-library.md) that this
+        # parser doesn't cross-reference, so they're left unchecked beyond
+        # existing as free-form optional strings. `spine_id` is handled by
+        # exactly_one_of below, together with `idea_id`, instead of its own
+        # nonempty check.
         nonempty_list_keys=["sources", "history"],
         status_key="status",
         status_enum={"draft", "in_review", "approved", "rejected",
                       "placeholder"},
         category_key="category",
         platform_key="platform",
+        engagement_goal_key="engagement_goal",
+        exactly_one_of=("idea_id", "spine_id"),
     ),
     NoteSpec(
         "substack-article", "Drafts", False,
@@ -372,6 +410,23 @@ def validate_note(path: Path, spec: NoteSpec) -> list[Issue]:
             if isinstance(val, list) or (isinstance(val, str) and val.strip() == ""):
                 issues.append(Issue("ERROR", path, f"Required field '{key}' is empty"))
 
+    if spec.exactly_one_of is not None:
+        key_a, key_b = spec.exactly_one_of
+        val_a = str(data.get(key_a, "") or "").strip()
+        val_b = str(data.get(key_b, "") or "").strip()
+        if val_a and val_b:
+            issues.append(Issue(
+                "ERROR", path,
+                f"'{key_a}' and '{key_b}' are both set — a note must be "
+                f"grounded in exactly one, never both",
+            ))
+        elif not val_a and not val_b:
+            issues.append(Issue(
+                "ERROR", path,
+                f"Neither '{key_a}' nor '{key_b}' is set — a note must be "
+                f"grounded in exactly one",
+            ))
+
     for key in spec.nonempty_list_keys:
         if key in data:
             val = data[key]
@@ -402,6 +457,14 @@ def validate_note(path: Path, spec: NoteSpec) -> list[Issue]:
             issues.append(Issue(
                 "ERROR", path,
                 f"'{spec.platform_key}: {plat}' is not one of {sorted(PLATFORMS)}",
+            ))
+
+    if spec.engagement_goal_key and spec.engagement_goal_key in data:
+        goal = str(data[spec.engagement_goal_key]).strip()
+        if goal and goal not in ENGAGEMENT_GOALS:
+            issues.append(Issue(
+                "ERROR", path,
+                f"'{spec.engagement_goal_key}: {goal}' is not one of {sorted(ENGAGEMENT_GOALS)}",
             ))
 
     note_id = str(data.get("id", "")).strip()
