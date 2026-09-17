@@ -764,6 +764,8 @@ class ValidateNoteIcpMapTests(unittest.TestCase):
 
 ENGAGEMENT_THREAD_SPEC = spec_by("engagement-thread", "Engagement")
 ENGAGEMENT_AUDIENCE_SPEC = spec_by("engagement-audience", "Engagement")
+EMPLOYEE_ADVOCACY_SPEC = spec_by("employee-advocacy", "Employee-Advocacy")
+ADVOCACY_METRICS_LOG_SPEC = spec_by("advocacy-metrics-log", "Employee-Advocacy")
 
 
 class ValidateNoteEngagementThreadTests(unittest.TestCase):
@@ -890,6 +892,160 @@ class ValidateNoteEngagementAudienceTests(unittest.TestCase):
             self.assertTrue(any("filename stem" in m for m in messages), messages)
 
 
+class ValidateNoteEmployeeAdvocacyTests(unittest.TestCase):
+    """Covers the Employee Advocacy module (/plan-advocacy,
+    REQUIREMENTS.md §36) employee-advocacy NoteSpec — the program-plan
+    note, first of two specs registered for the new Employee-Advocacy/
+    folder. Unlike Content-Learnings/ and Engagement/, this folder is
+    permissive_folder=False (the default): it starts clean with only two
+    intended types, so an unmatched type is treated as a real error."""
+
+    def _minimal_program_frontmatter(
+        self, status: str = "draft", primary_goal: str = "brand-awareness",
+    ) -> str:
+        return (
+            "id: 2026-09-17--example-co-program\n"
+            "type: employee-advocacy\n"
+            f"status: {status}\n"
+            'company: "Example Co"\n'
+            "launch_date: 2026-10-01\n"
+            "roster_size: 5\n"
+            f"primary_goal: {primary_goal}\n"
+            "history:\n"
+            "  - action: created\n"
+        )
+
+    def test_valid_employee_advocacy_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-09-17--example-co-program",
+                self._minimal_program_frontmatter(),
+            )
+            issues = vv.validate_note(path, EMPLOYEE_ADVOCACY_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_each_closed_list_primary_goal_value_is_valid(self):
+        for goal in ("brand-awareness", "hiring", "thought-leadership",
+                     "sales-pipeline"):
+            with tempfile.TemporaryDirectory() as tmp:
+                path = write_note(
+                    Path(tmp), "2026-09-17--example-co-program",
+                    self._minimal_program_frontmatter(primary_goal=goal),
+                )
+                issues = vv.validate_note(path, EMPLOYEE_ADVOCACY_SPEC)
+                errors = [i for i in issues if i.level == "ERROR"]
+                self.assertEqual(errors, [], f"goal={goal!r}: {errors}")
+
+    def test_invalid_primary_goal_errors(self):
+        fm = self._minimal_program_frontmatter().replace(
+            "primary_goal: brand-awareness\n", "primary_goal: virality\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-09-17--example-co-program", fm)
+            issues = vv.validate_note(path, EMPLOYEE_ADVOCACY_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("primary_goal" in m for m in messages), messages)
+
+    def test_placeholder_status_skips_content_checks(self):
+        fm = self._minimal_program_frontmatter().replace(
+            'company: "Example Co"\n', 'company: ""\n'
+        ).replace("status: draft\n", "status: placeholder\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-09-17--example-co-program", fm)
+            issues = vv.validate_note(path, EMPLOYEE_ADVOCACY_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_company_errors(self):
+        fm = self._minimal_program_frontmatter().replace(
+            'company: "Example Co"\n', ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-09-17--example-co-program", fm)
+            issues = vv.validate_note(path, EMPLOYEE_ADVOCACY_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("company" in m for m in messages), messages)
+
+    def test_invalid_status_value_errors(self):
+        fm = self._minimal_program_frontmatter().replace(
+            "status: draft\n", "status: paused\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-09-17--example-co-program", fm)
+            issues = vv.validate_note(path, EMPLOYEE_ADVOCACY_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("status" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_program_frontmatter().replace(
+            "id: 2026-09-17--example-co-program\n",
+            "id: 2026-09-17--different-co-program\n",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-09-17--example-co-program", fm)
+            issues = vv.validate_note(path, EMPLOYEE_ADVOCACY_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
+class ValidateNoteAdvocacyMetricsLogTests(unittest.TestCase):
+    """Covers the Employee Advocacy module's advocacy-metrics-log NoteSpec
+    — one shared, self-reported metrics log per program, second of two
+    specs registered for Employee-Advocacy/. No `status` field on this
+    note type, same as story-bank/icp-map/engagement-audience above —
+    content checks always apply."""
+
+    def _minimal_log_frontmatter(self, last_updated: str = "2026-09-17") -> str:
+        return (
+            "id: 2026-09-17--example-co-metrics-log\n"
+            "type: advocacy-metrics-log\n"
+            "program_id: 2026-09-17--example-co-program\n"
+            f"last_updated: {last_updated}\n"
+        )
+
+    def test_valid_advocacy_metrics_log_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-09-17--example-co-metrics-log",
+                self._minimal_log_frontmatter(),
+            )
+            issues = vv.validate_note(path, ADVOCACY_METRICS_LOG_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_program_id_errors(self):
+        fm = self._minimal_log_frontmatter().replace(
+            "program_id: 2026-09-17--example-co-program\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-09-17--example-co-metrics-log", fm)
+            issues = vv.validate_note(path, ADVOCACY_METRICS_LOG_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("program_id" in m for m in messages), messages)
+
+    def test_missing_last_updated_errors(self):
+        fm = self._minimal_log_frontmatter().replace(
+            "last_updated: 2026-09-17\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-09-17--example-co-metrics-log", fm)
+            issues = vv.validate_note(path, ADVOCACY_METRICS_LOG_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("last_updated" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_log_frontmatter().replace(
+            "id: 2026-09-17--example-co-metrics-log\n",
+            "id: 2026-09-17--different-co-metrics-log\n",
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-09-17--example-co-metrics-log", fm)
+            issues = vv.validate_note(path, ADVOCACY_METRICS_LOG_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
 class RouteNoteSpecTests(unittest.TestCase):
     """Covers the multi-spec-per-folder routing added alongside the
     Substack expansion (Drafts/ now holds both `draft` and
@@ -1002,6 +1158,27 @@ class RouteNoteSpecTests(unittest.TestCase):
         )
         self.assertIsNone(match)
 
+    def test_routes_employee_advocacy_type_to_its_spec(self):
+        match = vv.route_note_spec(
+            {"type": "employee-advocacy"},
+            [EMPLOYEE_ADVOCACY_SPEC, ADVOCACY_METRICS_LOG_SPEC],
+        )
+        self.assertIs(match, EMPLOYEE_ADVOCACY_SPEC)
+
+    def test_routes_advocacy_metrics_log_type_to_its_spec(self):
+        match = vv.route_note_spec(
+            {"type": "advocacy-metrics-log"},
+            [EMPLOYEE_ADVOCACY_SPEC, ADVOCACY_METRICS_LOG_SPEC],
+        )
+        self.assertIs(match, ADVOCACY_METRICS_LOG_SPEC)
+
+    def test_unmatched_type_in_employee_advocacy_returns_none(self):
+        match = vv.route_note_spec(
+            {"type": "something-else"},
+            [EMPLOYEE_ADVOCACY_SPEC, ADVOCACY_METRICS_LOG_SPEC],
+        )
+        self.assertIsNone(match)
+
 
 class PermissiveFolderTests(unittest.TestCase):
     """Covers the fix for the regression Phase 15's report flagged: once
@@ -1039,6 +1216,17 @@ class PermissiveFolderTests(unittest.TestCase):
 
     def test_drafts_specs_are_not_permissive(self):
         self.assertFalse(vv.is_permissive_folder([DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC]))
+
+    def test_employee_advocacy_specs_are_not_permissive(self):
+        # Employee-Advocacy/ (REQUIREMENTS.md §36) is new and starts
+        # multi-spec from day one (employee-advocacy + advocacy-metrics-log),
+        # same as Engagement/ did — but unlike Engagement/ and
+        # Content-Learnings/, it deliberately stays non-permissive: it
+        # starts clean with only these two intended types (no pre-existing
+        # untyped files to protect), so an unmatched type is a real error.
+        self.assertFalse(vv.is_permissive_folder(
+            [EMPLOYEE_ADVOCACY_SPEC, ADVOCACY_METRICS_LOG_SPEC]
+        ))
 
     def test_single_spec_folder_permissiveness_is_irrelevant(self):
         # Doesn't matter either way for single-spec folders, since
@@ -1104,6 +1292,19 @@ class GroupSpecsByFolderTests(unittest.TestCase):
         type_names = {s.type_name for s in by_folder["Engagement"]}
         self.assertEqual(
             type_names, {"engagement-thread", "engagement-audience"},
+        )
+
+    def test_employee_advocacy_folder_has_two_specs(self):
+        # New as of the Employee Advocacy module (/plan-advocacy,
+        # REQUIREMENTS.md §36) — starts multi-spec from day one:
+        # employee-advocacy (the program plan) and advocacy-metrics-log
+        # (the shared self-reported log) share the folder from its
+        # creation, same shape as Engagement/ but non-permissive.
+        by_folder = vv.group_specs_by_folder(vv.SPECS)
+        self.assertEqual(len(by_folder["Employee-Advocacy"]), 2)
+        type_names = {s.type_name for s in by_folder["Employee-Advocacy"]}
+        self.assertEqual(
+            type_names, {"employee-advocacy", "advocacy-metrics-log"},
         )
 
 
