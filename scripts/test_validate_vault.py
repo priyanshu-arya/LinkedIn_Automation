@@ -437,6 +437,53 @@ class ValidateNoteHookFormulasTests(unittest.TestCase):
             self.assertTrue(any("filename stem" in m for m in messages), messages)
 
 
+HUMANIZER_RULES_SPEC = spec_by("humanizer-rules", "Content-Learnings")
+
+
+class ValidateNoteHumanizerRulesTests(unittest.TestCase):
+    """Covers the Phase 18 (Humanizer) humanizer-rules NoteSpec: the third
+    registered spec for Content-Learnings/, added alongside story-bank and
+    hook-formulas — same single-living-doc shape, no `status` field."""
+
+    def _minimal_humanizer_rules_frontmatter(self, last_updated: str = "2026-09-17") -> str:
+        return (
+            "id: humanizer-rules\n"
+            "type: humanizer-rules\n"
+            "version: 1\n"
+            f"last_updated: {last_updated}\n"
+        )
+
+    def test_valid_humanizer_rules_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "humanizer-rules",
+                self._minimal_humanizer_rules_frontmatter(),
+            )
+            issues = vv.validate_note(path, HUMANIZER_RULES_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_last_updated_field_errors(self):
+        fm = self._minimal_humanizer_rules_frontmatter().replace(
+            "last_updated: 2026-09-17\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "humanizer-rules", fm)
+            issues = vv.validate_note(path, HUMANIZER_RULES_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("last_updated" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_humanizer_rules_frontmatter().replace(
+            "id: humanizer-rules\n", "id: humanizer-rules-wrong\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "humanizer-rules", fm)
+            issues = vv.validate_note(path, HUMANIZER_RULES_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
 class RouteNoteSpecTests(unittest.TestCase):
     """Covers the multi-spec-per-folder routing added alongside the
     Substack expansion (Drafts/ now holds both `draft` and
@@ -487,11 +534,19 @@ class RouteNoteSpecTests(unittest.TestCase):
         )
         self.assertIs(match, HOOK_FORMULAS_SPEC)
 
+    def test_routes_humanizer_rules_type_to_humanizer_rules_spec(self):
+        match = vv.route_note_spec(
+            {"type": "humanizer-rules"},
+            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC],
+        )
+        self.assertIs(match, HUMANIZER_RULES_SPEC)
+
     def test_unmatched_type_in_content_learnings_returns_none(self):
         # playbook.md / voice-guide.md carry `type: playbook` / `type:
-        # voice-guide` — neither matches either registered spec.
+        # voice-guide` — neither matches any registered spec.
         match = vv.route_note_spec(
-            {"type": "playbook"}, [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC]
+            {"type": "playbook"},
+            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC],
         )
         self.assertIsNone(match)
 
@@ -551,13 +606,16 @@ class GroupSpecsByFolderTests(unittest.TestCase):
         type_names = {s.type_name for s in by_folder["Published-Posts"]}
         self.assertEqual(type_names, {"post", "substack-ready"})
 
-    def test_content_learnings_folder_has_two_specs(self):
+    def test_content_learnings_folder_has_three_specs(self):
         # Was single-spec through Phase 15; Phase 16 (Hook Extractor) adds
-        # hook-formulas alongside story-bank.
+        # hook-formulas alongside story-bank; Phase 18 (Humanizer) adds
+        # humanizer-rules alongside both.
         by_folder = vv.group_specs_by_folder(vv.SPECS)
-        self.assertEqual(len(by_folder["Content-Learnings"]), 2)
+        self.assertEqual(len(by_folder["Content-Learnings"]), 3)
         type_names = {s.type_name for s in by_folder["Content-Learnings"]}
-        self.assertEqual(type_names, {"story-bank", "hook-formulas"})
+        self.assertEqual(
+            type_names, {"story-bank", "hook-formulas", "humanizer-rules"}
+        )
 
 
 if __name__ == "__main__":

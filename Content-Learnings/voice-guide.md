@@ -48,9 +48,16 @@ starting point.
 - Excessive emoji as bullet substitutes (🚀 🔥 💡 stacked at line starts).
 - Generic CTAs with no real question attached ("Thoughts? Let me know
   below!" with nothing specific to react to).
-- Em-dash overuse as a substitute for real sentence structure.
+- Em-dash overuse — cap at ~1 per 100 words, not zero; see
+  `humanizer-rules.md` for the full rationale.
 - Hedging every sentence ("It's important to note that...", "One could
   argue...").
+
+For the scored/expanded version of this list — paragraph-level density
+scoring, 2026-specific vocabulary, and additional patterns (reveal
+bridges, fragment stacks, stacked triads, performed sincerity) — see
+`Content-Learnings/humanizer-rules.md`. `/humanize-draft` enforces it
+mechanically; this list stays the human-readable summary.
 
 ## Hashtags
 

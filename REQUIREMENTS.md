@@ -2,7 +2,7 @@
 
 Status: **Draft — requirements captured, no implementation started.**
 Owner: Priyanshu Arya
-Last updated: 2026-09-17 (§27 added: Reading Third-Party Post Content)
+Last updated: 2026-09-17 (§29 added: Humanizer)
 
 ---
 
@@ -634,3 +634,86 @@ research note.
 frontmatter fields, all empty-string by default so every previously
 written draft keeps validating unchanged: `hook_formula`,
 `engagement_goal`, `founders_angle`, `spine_id`.
+
+---
+
+## 29. Humanizer (Style De-AI-ification)
+
+Added 2026-09-17 (Phase 18). `/humanize-draft` scores and rewrites a
+draft's **surface style** against a real, numeric 2026 AI-writing-tell
+rule set in `Content-Learnings/humanizer-rules.md`, and documents — never
+claims to close — the disagreement between AI-detection services. It is a
+shared step two later builds (Post Audit, Repurposer) call, not just a
+standalone skill, so its input/output contract matters as much as its own
+behavior.
+
+**Scoring dimensions**, all defined with real numbers (not invented
+thresholds) in `Content-Learnings/humanizer-rules.md`:
+- **AI vocabulary markers** — durable 2026 markers (e.g. leverage, robust,
+  landscape, nuanced) scored per paragraph; decaying 2023-24 terms (delve,
+  tapestry, realm, journey, paradigm) flagged for scrutiny but noted as
+  "now mostly harmless." Density threshold: 3+ markers in one paragraph
+  triggers a rewrite of that paragraph; a single marker alone does not.
+- **Em-dash cap** — see below.
+- **Reveal bridges** — four specific phrases ("The result?", "It's not X,
+  it's Y", "Stop X, start Y", "Here's what/how"), each with a measured
+  real reach-impact percentage; every hit is flagged, no free allowance.
+- **Staccato fragment stacks** — five patterns banned outright (pseudo-
+  question fragments, "No X. No Y. Just Z.", "All the X. None of the Y.",
+  adjective stacks, one-word paragraphs), plus a document-wide cap of 2
+  standalone fragments for any other legitimate use.
+- **Stacked triads** — one natural rule-of-three allowed per post
+  (matching the ~26% of top-performing posts that contain one); anything
+  beyond that is scrubbed.
+- **Performed sincerity** — phrases like "Let me be honest" or "Unpopular
+  opinion:" preceding a widely-held claim, plus inserted hedges
+  ("perhaps," "I might be wrong") flagged as a related tell.
+- **Readability** — Flesch reading ease target > 55.
+- **Odd-precision numbers** — only counted as a genuine human fingerprint
+  when a named referent (who/what/when/cost) is attached; a bare precise
+  number is not automatically a positive signal, and is never rewritten
+  since doing so would change a claim.
+
+**Em-dash cap, specifically.** Capped at **~1 per 100 words** — a cap, not
+a ban. Zero em dashes is itself a tell ("trying too hard to look human").
+For reference, GPT-5.4-era text emits ~1.43 em dashes per 1,000 words,
+well below the ~3.23-per-1,000 human baseline, so this cap is deliberately
+generous, not restrictive. Excess dashes convert to commas, colons, or
+parentheses — never periods, since that changes rhythm too much to count
+as a same-meaning style fix.
+
+**Never claims to beat or guarantee evasion of any AI-detection service.**
+The multi-detector spread-check (GPTZero, Originality.ai, ZeroGPT,
+Sapling, Copyleaks) is manual-only — no API keys are held for any of the
+five services, and none of their APIs are ever called or their web UIs
+scraped, permanently, not just "for now." This is the same manual-fallback
+precedent as §7 (visuals: no image-generation provider configured, so the
+deliverable is a paste-ready prompt) and §25.3 (Substack publishing: no
+supported API, so the deliverable is a copy-ready note and a human
+publishes it). Here, the skill hands back the finished revised draft plus
+an instruction block asking the user to paste it into each of the five
+services themselves and report back the scores; if they do, those scores
+are logged verbatim and the spread is reported as a range ("scores ranged
+X–Y across services; treat none as ground truth, never average them into
+a single verdict") — never fabricated, never averaged into a single
+pass/fail verdict.
+
+**Input/output contract** (the stable interface Post Audit and
+Repurposer, two later builds, will call this skill through — see
+`.claude/skills/humanize-draft/SKILL.md`'s own "Input / Output Contract"
+section for the full, authoritative version):
+- **Input:** `text`, `platform` (linkedin | x | substack-note |
+  substack-article), optional `draft_id` (if given and a real Draft Note
+  with that id exists, a `history` entry is logged on it).
+- **Output:** `revised_text`; a `score_report` (one entry per scoring
+  dimension above); a `detector_spread` object that starts `{status:
+  "not_run"}` and only becomes `{status: "manual_results_provided",
+  results: [...]}` once the user actually supplies real detector scores;
+  a `changes_made` list (`{rule, before, after}` per change); and a
+  `caveats` string that is always present, every call, stating plainly
+  that no detector-proof or guaranteed-undetectable claim is being made.
+
+**Style/surface only — never touches facts.** This skill never changes a
+claim, source, or number in a draft; that discipline stays
+`/critique-draft`'s job (§14/§21). Humanizer rewrites how something is
+said, never what is claimed.

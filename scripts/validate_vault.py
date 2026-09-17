@@ -299,6 +299,23 @@ SPECS = [
         category_key=None,
         permissive_folder=True,
     ),
+    # Added Phase 18 (Humanizer). Same single-living-doc shape as
+    # story-bank.md/hook-formulas.md above — see Content-Learnings/
+    # humanizer-rules.md's own header. This is the third registered spec
+    # for Content-Learnings/; permissive_folder=True for the same reason as
+    # the two entries above (playbook.md/voice-guide.md and friends must
+    # stay silently unvalidated, not start erroring, once the folder has
+    # more than one spec).
+    NoteSpec(
+        "humanizer-rules", "Content-Learnings", False,
+        required_keys=["id", "type", "version", "last_updated"],
+        nonempty_scalar_keys=["id", "type", "version", "last_updated"],
+        nonempty_list_keys=[],
+        status_key=None,
+        status_enum=None,
+        category_key=None,
+        permissive_folder=True,
+    ),
 ]
 
 
