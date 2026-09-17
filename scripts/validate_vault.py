@@ -44,6 +44,18 @@ PLATFORMS = {"linkedin", "x", "substack-article", "substack-note"}
 # before Phase 17), so this only fires when a value is actually present.
 ENGAGEMENT_GOALS = {"likes", "comments", "shares", "saves", "profile-visits"}
 
+# Single-value `source_type` field (Draft Notes, Phase 20 Repurposer),
+# checked when a spec sets source_type_key — same optional-if-present pattern
+# as ENGAGEMENT_GOALS/engagement_goal_key above. Closed 5-value list per
+# REQUIREMENTS.md §31; the field itself is optional (blank/absent on every
+# draft not produced by /repurpose-post), so this only fires when a value is
+# actually present and non-empty. `none` is deliberately NOT a member of this
+# set — a non-repurposed draft should simply leave the field blank rather
+# than write the literal string "none" (both validate the same way here,
+# since an empty check happens first, but the closed list itself only lists
+# real source types).
+SOURCE_TYPES = {"tweet", "thread", "youtube", "blog", "newsletter"}
+
 ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}--[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -63,6 +75,9 @@ class NoteSpec:
     # None for every spec except "draft", since only Draft Notes carry this
     # field.
     engagement_goal_key: str | None = None
+    # checked against SOURCE_TYPES if present (Phase 20 Repurposer); None for
+    # every spec except "draft", since only Draft Notes carry this field.
+    source_type_key: str | None = None
     # A pair of keys where exactly one must be non-empty (Phase 17 Post
     # Writer's idea-path-vs-spine-path split): None for every spec except
     # "draft", where it's ("idea_id", "spine_id") — an idea-drafted note
@@ -147,6 +162,16 @@ SPECS = [
         # existing as free-form optional strings. `spine_id` is handled by
         # exactly_one_of below, together with `idea_id`, instead of its own
         # nonempty check.
+        #
+        # `source_type` and `source_link` (Phase 20 Repurposer,
+        # REQUIREMENTS.md §31) are the same kind of backward-compatible
+        # optional addition — excluded from required_keys/
+        # nonempty_scalar_keys so every Draft Note written before Phase 20
+        # keeps validating unchanged. `source_type` gets a closed-list check
+        # below (via source_type_key) when it *is* present and non-empty;
+        # `source_link` is a free-form URL/blank string this parser doesn't
+        # otherwise validate (no URL-shape check, same as other free-text
+        # fields elsewhere in this schema).
         nonempty_list_keys=["sources", "history"],
         status_key="status",
         status_enum={"draft", "in_review", "approved", "rejected",
@@ -154,6 +179,7 @@ SPECS = [
         category_key="category",
         platform_key="platform",
         engagement_goal_key="engagement_goal",
+        source_type_key="source_type",
         exactly_one_of=("idea_id", "spine_id"),
     ),
     NoteSpec(
@@ -448,17 +474,29 @@ def validate_note(path: Path, spec: NoteSpec) -> list[Issue]:
         key_a, key_b = spec.exactly_one_of
         val_a = str(data.get(key_a, "") or "").strip()
         val_b = str(data.get(key_b, "") or "").strip()
+        # Phase 20 (Repurposer): a draft grounded in `source_type` (a
+        # tweet/thread/video/article, not an Idea Note or Story Bank Post
+        # Spine) legitimately has neither idea_id nor spine_id set. Treat a
+        # real, non-"none" source_type as a third valid grounding for the
+        # "neither is set" branch only — it does not exempt a note from the
+        # "both idea_id and spine_id set" error above, which stays a real
+        # schema conflict regardless of source_type.
+        src_type_val = ""
+        if spec.source_type_key:
+            src_type_val = str(data.get(spec.source_type_key, "") or "").strip()
+        has_source_grounding = bool(src_type_val) and src_type_val != "none"
         if val_a and val_b:
             issues.append(Issue(
                 "ERROR", path,
                 f"'{key_a}' and '{key_b}' are both set — a note must be "
                 f"grounded in exactly one, never both",
             ))
-        elif not val_a and not val_b:
+        elif not val_a and not val_b and not has_source_grounding:
             issues.append(Issue(
                 "ERROR", path,
                 f"Neither '{key_a}' nor '{key_b}' is set — a note must be "
-                f"grounded in exactly one",
+                f"grounded in exactly one (or, for a /repurpose-post draft, "
+                f"a non-empty 'source_type')",
             ))
 
     for key in spec.nonempty_list_keys:
@@ -499,6 +537,14 @@ def validate_note(path: Path, spec: NoteSpec) -> list[Issue]:
             issues.append(Issue(
                 "ERROR", path,
                 f"'{spec.engagement_goal_key}: {goal}' is not one of {sorted(ENGAGEMENT_GOALS)}",
+            ))
+
+    if spec.source_type_key and spec.source_type_key in data:
+        src_type = str(data[spec.source_type_key]).strip()
+        if src_type and src_type not in SOURCE_TYPES:
+            issues.append(Issue(
+                "ERROR", path,
+                f"'{spec.source_type_key}: {src_type}' is not one of {sorted(SOURCE_TYPES)}",
             ))
 
     note_id = str(data.get("id", "")).strip()

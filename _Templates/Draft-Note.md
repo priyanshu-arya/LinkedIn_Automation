@@ -10,6 +10,8 @@ hook_style: ""
 hook_formula: "" # formula_id from Content-Learnings/hook-formulas.md picked by /write-draft (Phase 17), e.g. "F10" — optional, blank on drafts written before this field existed
 engagement_goal: "" # likes | comments | shares | saves | profile-visits — closed 5-value list per REQUIREMENTS.md §28, optional, blank on drafts written before this field existed
 founders_angle: "" # angle_id from Content-Learnings/founders-angle-library.md if one was used, e.g. "A5" — optional, left blank when no real Story Bank match existed (see /write-draft's founders-angle fallback rule)
+source_type: "" # tweet | thread | youtube | blog | newsletter | none — set by /repurpose-post (Phase 20) when this draft originated from another platform's content; blank/none on every other draft, including all pre-Phase-20 drafts
+source_link: "" # the source's URL, to be posted as a first LinkedIn comment (manual step — no auto-comment capability exists) once the post itself goes live; blank if the source had no link or none was worth preserving, per REQUIREMENTS.md §31's in-body-link penalty
 hashtags: []
 thread: []       # X threads only: ordered list of tweet segments (each its own string). Leave empty for a single-post draft — the ## Post Text body is the full post either way.
 visual_ids: []
