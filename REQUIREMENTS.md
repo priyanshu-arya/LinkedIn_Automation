@@ -990,8 +990,8 @@ the primary, reliable input; a URL alone is optional metadata and a
 WebFetch attempt on it is best-effort convenience only, never ground truth
 without the user's explicit confirmation. Nothing here adds to or narrows
 §27 — this is one of the four skills (alongside `/extract-hook`,
-`/draft-reply`, plus the not-yet-built Engagement Monitor) that cross-
-reference it rather than restating it.
+`/draft-reply`, and `/monitor-engagement`, §35) that cross-reference it
+rather than restating it.
 
 **Output is always ephemeral copy-paste text.** No vault artifact is
 created: no Draft Note, no `Drafts/` entry, no `status: draft`/`in_review`
@@ -1023,8 +1023,8 @@ Research → Draft → Approve → Schedule pipeline.
 text is the primary, reliable input; a post URL alone is optional
 metadata and a WebFetch attempt on it is best-effort convenience only.
 This is the second of the three skills named in §27 (alongside
-`/draft-comment`, plus the not-yet-built Engagement Monitor) that
-cross-reference it rather than restating it.
+`/draft-comment` and `/monitor-engagement`, §35) that cross-reference it
+rather than restating it.
 
 **2-level-flattening attribution rule.** LinkedIn nests replies only one
 level deep, flattening a reply-to-a-reply into the same top-level-reply
@@ -1048,3 +1048,102 @@ created — no Draft Note, no `Drafts/` entry, no approval-pipeline
 lifecycle (§8), same class of limitation as §33: no comment/reply-posting
 API exists anywhere in this repo, so output always goes to the user to
 paste in manually.
+
+---
+
+## 35. Engagement Monitoring (Comment Threads and Audience ICP)
+
+Added 2026-09-17 (Phase 24). `/monitor-engagement` is the third and last
+of the three skills named in §27's shared third-party-content-reading
+convention (alongside Comment Drafter, §33, and Reply Handler, §34) — the
+"not-yet-built Engagement Monitor" those two sections referenced is now
+built, and their cross-references have been updated accordingly.
+
+**State this plainly: both of this skill's workflows are manual-input
+only.** Confirmed against `pull-analytics/SKILL.md` (§9): Buffer's API
+returns metrics only for the user's own scheduled/published posts — it
+has no visibility into third-party post/comment activity at all. There is
+no live data source anywhere in this repo for (a) detecting when someone
+replies to the user's comment on someone else's post, or (b) pulling a
+likers/commenters list for an arbitrary post. Neither gap is closeable
+without scraping or an unofficial/session-cookie API, which this repo
+already rejected on the publishing side (§25.3) and that rejection
+extends here to reading third-party engagement data — no live polling or
+scraping capability is ever added for this skill.
+
+**Workflow 1 — thread watch (`/monitor-engagement threads`).** Tracks the
+user's own comment threads on other people's posts for author replies.
+There is no notification/polling mechanism for third-party reply activity
+anywhere in this repo, so every run is a manual snapshot: the user pastes
+the post URL, the thread's current visible text, and (on first run) their
+own comment's timestamp. Storage is a new top-level `Engagement/` folder,
+one file per tracked thread: `Engagement/<post-slug>--thread.md`, created
+from a new `_Templates/Engagement-Thread-Note.md` (frontmatter `id`,
+`type: engagement-thread`, `post_url`, `my_comment_text`,
+`my_comment_time` — user-supplied, since no API confirms it —
+`status: watching|closed`; body a `## Logged Replies` table of
+`author | text_snippet | seen_date`). Each run diffs the freshly pasted
+thread text against the note's logged table; entries not already logged
+are "new," and each new reply is bucketed by elapsed time from
+`my_comment_time` to the diff run's own date (an approximation, not a
+guaranteed reply-time measurement — stated as such in every report):
+under 6h logs the reply and defers drafting; 6-24h delegates to
+`/draft-reply`'s single-reply mode for an immediate follow-up draft;
+over 24h still delegates to `/draft-reply` but flags the window as
+"likely passed, lower priority." **This workflow never reimplements reply
+drafting — it always calls `/draft-reply`,** which itself never
+auto-posts. The updated `## Logged Replies` table is written back after
+every run so the next diff only reports genuinely new activity.
+
+**Workflow 2 — audience pull (`/monitor-engagement audience
+<post-url-or-id>`).** Pulls a post's likers/commenters — pasted by the
+user, per §27, never fetched live — and classifies each by ICP fit using
+a three-way rubric, applied to whatever job title/headline text the user
+actually pasted and always offered as a suggestion the user can correct,
+never asserted as settled fact:
+- **Peer** — an individual-contributor/similar-seniority title in
+  AI/ML/data/engineering, doing comparable work.
+- **Aspirational** — a senior/leadership title (Director, VP, Head of,
+  Principal, Founder) or a recognizable figure the user doesn't already
+  have a peer relationship with.
+- **Prospect** — a title with hiring/buying power relevant to the user
+  (recruiter, hiring/engineering manager, founder hiring).
+
+Before finalizing a classification, `Content-Learnings/icp-map.md` is
+checked for that name; an existing mapping is reused rather than
+re-guessed (surfaced to the user rather than silently trusted forever), and
+any new or ambiguous name is confirmed with the user before being written.
+Confirmed classifications are appended into `icp-map.md`'s `## Mappings`
+table (`name | category | last_confirmed_date`) — a living doc, same
+accumulation pattern as `hook-formulas.md`/`humanizer-rules.md`/
+`algorithm-rules.md`/`comment-targets.md` — so a repeat account isn't
+re-classified from scratch every time it shows up in a new post's list.
+It ships empty and accumulates only from real `/monitor-engagement
+audience` runs, never seeded with invented names. The full snapshot (all
+names, not just newly classified ones) is also written into a new
+`Engagement/<post-slug>--audience.md` note, created from a new
+`_Templates/Engagement-Audience-Note.md` (frontmatter `id`,
+`type: engagement-audience`, `post_url`, `captured_date`; body: one table
+per ICP category — Peer / Aspirational / Prospect — with columns
+`name | title_or_headline | notes`).
+
+**Vault schema.** `scripts/validate_vault.py` gains a sixth
+`Content-Learnings/` NoteSpec (`icp-map`, `permissive_folder=True`, same
+minimal `id`/`type`/`version`/`last_updated` shape as the other five) and
+two new NoteSpecs for the new `Engagement/` folder: `engagement-thread`
+(required `id`/`type`/`post_url`/`my_comment_time`/`status`, status enum
+`{watching, closed, placeholder}`) and `engagement-audience` (required
+`id`/`type`/`post_url`/`captured_date`). `Engagement/` is
+`permissive_folder=True` from day one, since — like `Content-Learnings/`
+— it holds two note types sharing one folder from the start, and each
+spec must let the other's `type` pass through unvalidated rather than
+erroring on it.
+
+**Hard rules.** Never fabricate a reply, liker, or commenter beyond what
+the user actually pasted; never claim "no new replies" beyond what was
+pasted this run; never auto-post anything — Workflow 1's drafting is
+always delegated to `/draft-reply`, itself non-posting, and this skill
+never posts a follow-up, a comment, or anything else itself; ICP labels
+are always suggestions pending the user's confirmation, never settled
+fact; no scraping, no session-cookie/unofficial API access, ever, per
+§27.

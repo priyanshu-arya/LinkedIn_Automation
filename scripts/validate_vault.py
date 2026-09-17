@@ -379,6 +379,56 @@ SPECS = [
         category_key=None,
         permissive_folder=True,
     ),
+    # Added Phase 24 (Engagement Monitor). Same single-living-doc shape as
+    # story-bank.md/hook-formulas.md/humanizer-rules.md/algorithm-rules.md/
+    # comment-targets.md above — see Content-Learnings/icp-map.md's own
+    # header. This is the sixth registered spec for Content-Learnings/;
+    # permissive_folder=True for the same reason as the five entries above
+    # (playbook.md/voice-guide.md and friends must stay silently
+    # unvalidated, not start erroring, once the folder has more than one
+    # spec). Like comment-targets.md, icp-map.md accumulates only via
+    # explicit user confirmation during a real /monitor-engagement audience
+    # run rather than fully-automated appends — but its frontmatter shape
+    # (and therefore its NoteSpec) is identical to the other five.
+    NoteSpec(
+        "icp-map", "Content-Learnings", False,
+        required_keys=["id", "type", "version", "last_updated"],
+        nonempty_scalar_keys=["id", "type", "version", "last_updated"],
+        nonempty_list_keys=[],
+        status_key=None,
+        status_enum=None,
+        category_key=None,
+        permissive_folder=True,
+    ),
+    # Added Phase 24 (Engagement Monitor, REQUIREMENTS.md §35). New
+    # `Engagement/` folder, holding two note types from day one:
+    # `engagement-thread` (Workflow 1, thread watch) and
+    # `engagement-audience` (Workflow 2, audience pull). Same reasoning as
+    # Content-Learnings/ for permissive_folder=True — two specs sharing one
+    # folder from the start means each must let the other's `type` pass
+    # through unvalidated rather than erroring on it.
+    NoteSpec(
+        "engagement-thread", "Engagement", False,
+        required_keys=["id", "type", "post_url", "my_comment_time",
+                        "status"],
+        nonempty_scalar_keys=["id", "type", "post_url", "my_comment_time",
+                               "status"],
+        nonempty_list_keys=[],
+        status_key="status",
+        status_enum={"watching", "closed", "placeholder"},
+        category_key=None,
+        permissive_folder=True,
+    ),
+    NoteSpec(
+        "engagement-audience", "Engagement", False,
+        required_keys=["id", "type", "post_url", "captured_date"],
+        nonempty_scalar_keys=["id", "type", "post_url", "captured_date"],
+        nonempty_list_keys=[],
+        status_key=None,
+        status_enum=None,
+        category_key=None,
+        permissive_folder=True,
+    ),
 ]
 
 
