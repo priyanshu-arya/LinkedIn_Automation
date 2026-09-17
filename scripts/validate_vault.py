@@ -359,6 +359,26 @@ SPECS = [
         category_key=None,
         permissive_folder=True,
     ),
+    # Added Phase 21 (Content Planner). Same single-living-doc shape as
+    # story-bank.md/hook-formulas.md/humanizer-rules.md/algorithm-rules.md
+    # above — see Content-Learnings/comment-targets.md's own header. This is
+    # the fifth registered spec for Content-Learnings/; permissive_folder=
+    # True for the same reason as the four entries above (playbook.md/
+    # voice-guide.md and friends must stay silently unvalidated, not start
+    # erroring, once the folder has more than one spec). Unlike the other
+    # four, comment-targets.md is user-maintained rather than system-
+    # populated/appended — but its frontmatter shape (and therefore its
+    # NoteSpec) is identical, since only the body content differs.
+    NoteSpec(
+        "comment-targets", "Content-Learnings", False,
+        required_keys=["id", "type", "version", "last_updated"],
+        nonempty_scalar_keys=["id", "type", "version", "last_updated"],
+        nonempty_list_keys=[],
+        status_key=None,
+        status_enum=None,
+        category_key=None,
+        permissive_folder=True,
+    ),
 ]
 
 

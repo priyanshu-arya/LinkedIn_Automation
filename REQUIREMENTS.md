@@ -881,3 +881,97 @@ comment, blank if none).
 existing approval pipeline unchanged — this skill never marks anything
 `approved`, `scheduled`, or `published`, and never auto-posts the first
 comment itself.
+
+---
+
+## 32. Weekly Calendar View & Comment Targets (Content Planner)
+
+Added 2026-09-17 (Phase 21). **This section is additive to §5, not a
+replacement** — the count/quality-gating rule in §5 is unchanged word for
+word: default ~3 posts/week, never padded to hit a count, quality gates the
+count as a hard rule rather than a target to hit. This section only adds a
+full-week visibility format and two new per-slot fields to `/plan-week`
+(Content Planner). It does not change which ideas get selected, how many
+slots get filled, or the Tue/Thu/Sat starting heuristic and content-type
+variety rule §5 already defines.
+
+**Mon-Sun calendar view.** `/plan-week` now renders its report as a full
+seven-day table (Monday through Sunday), not a list of only the days it
+filled. Days §5's quality gate didn't clear are shown as explicit rows with
+`status: empty` and the same one-line reason the skill already produces for
+an unfilled slot (e.g. "no Career-category ideas in the pool") — an empty
+day is visible and explained, never silently omitted and never padded with
+a weak idea just to have something to show in every row. Sunday remains
+excluded from the *fillable* cadence by default (§5) but still appears in
+the view as an empty row, consistent with the rest of the week.
+
+**Hook-formula assignment (filled slots only).** For each slot that gets
+filled, `/plan-week` reads `Content-Learnings/hook-formulas.md` fresh and
+assigns one `status: canonical` formula whose `engagement_goals` value fits
+the idea's likely engagement goal (or a general-purpose formula carrying no
+goal tag) and whose mechanic fits the idea's category/content_type. Two
+anti-repetition checks apply, both required: (1) the same `formula_id`
+never appears on two slots within the same week's plan, and (2) the recent
+history in `Content-Learnings/content-index.md`'s `hook_gist` column
+(§15/§25.4) is checked so a formula's mechanic isn't repeated from the last
+few weeks' published/scheduled posts either, not just within this week's
+own picks. This assigns a *formula suggestion* only, never the finished
+hook text — `/write-draft` (§28) still does the actual drafting later, reads
+`hook-formulas.md` fresh itself at that time, and may pick a different
+formula if circumstances have changed by then (e.g. a `proposed` formula
+was promoted to `canonical` in the meantime, or new playbook evidence
+shifted the goal-fit). Nothing here overrides `/write-draft`'s own
+hook-selection step. Only `canonical` formulas are eligible, same rule as
+`/write-draft` — a `proposed` row is never assigned at planning time either.
+
+**Time assignment (filled slots only).** For each filled slot,
+`/plan-week` attaches the posting time §11 already specifies for whichever
+day the slot landed on (Tue 16:00 / Thu 17:00 / Sat 09:00, etc.), unless
+`Content-Learnings/playbook.md` has ≥3 published posts' worth of evidence
+for a better day+time+content-type combination, in which case that
+evidenced combination is used instead — exactly the override §11 already
+defines. This is pure surfacing of §11's existing rule at planning time
+instead of leaving the time unset until `/schedule-approved`; it introduces
+no new time logic, no new default table, and no change to §11 itself.
+
+**Comment targets (new concept, filled slots only).** For each filled
+slot, `/plan-week` attaches 2-3 specific external accounts/posts to
+proactively comment on that day. This is a genuinely new concept, not
+previously defined anywhere else in this spec, sourced in priority order:
+
+1. `Content-Learnings/comment-targets.md` — a new, **user-maintained**
+   plain list (name, profile URL/handle, why, added date) of accounts and
+   thought-leaders the user wants ongoing engagement with. Unlike every
+   other `Content-Learnings/` living doc in this spec (`playbook.md`,
+   `hook-formulas.md`, `humanizer-rules.md`, `algorithm-rules.md`,
+   `story-bank.md`), this file is never system-populated or
+   system-appended — it starts empty and only grows by the user's own
+   edits.
+2. **Fallback**, used only when (1) is absent or too thin to fill a slot:
+   accounts/authors/publications that came up as sources or citations in
+   that week's `/research-topic` runs, specifically the research actually
+   backing that slot's idea.
+3. **Neither source yields anything:** the field is left explicitly empty
+   in the report with a one-line stated reason (e.g. "no
+   comment-targets.md entries and no research-cited accounts this week").
+   Never invented — a fabricated account or post here would look like a
+   real recommendation and is exactly the kind of unverifiable claim §21
+   already prohibits, so this file starts with zero example rows rather
+   than the placeholder-row pattern `story-bank.md`/`hook-formulas.md` use
+   for their schema.
+
+**Hard rule (equal weight to §5's count-padding rule).** Hook formulas and
+comment targets are attached only to filled slots. Never invent either for
+a day that stays empty, and never let hook-formula or comment-target
+scarcity itself become a reason to fill a slot that otherwise wouldn't
+clear §5's quality bar. Scarcity in a supporting field is never license to
+lower the bar on the underlying selection decision.
+
+**Vault schema.** `Content-Learnings/comment-targets.md` is a fifth
+registered `Content-Learnings/` NoteSpec in `scripts/validate_vault.py`
+(`type: comment-targets`), validated with the same minimal
+`id`/`type`/`version`/`last_updated` shape and `permissive_folder=True`
+pattern as the four existing entries (`story-bank`, `hook-formulas`,
+`humanizer-rules`, `algorithm-rules`) — the user-maintained `## Targets`
+table itself is not schema-validated, the same way none of those four
+files' body tables are.

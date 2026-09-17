@@ -665,6 +665,56 @@ class ValidateNoteAlgorithmRulesTests(unittest.TestCase):
             self.assertTrue(any("filename stem" in m for m in messages), messages)
 
 
+COMMENT_TARGETS_SPEC = spec_by("comment-targets", "Content-Learnings")
+
+
+class ValidateNoteCommentTargetsTests(unittest.TestCase):
+    """Covers the Phase 21 (Content Planner) comment-targets NoteSpec: the
+    fifth registered spec for Content-Learnings/, added alongside
+    story-bank, hook-formulas, humanizer-rules, and algorithm-rules — same
+    single-living-doc shape, no `status` field. Unlike the other four,
+    comment-targets.md is user-maintained rather than system-populated, but
+    its frontmatter schema is identical."""
+
+    def _minimal_comment_targets_frontmatter(self, last_updated: str = "2026-09-17") -> str:
+        return (
+            "id: comment-targets\n"
+            "type: comment-targets\n"
+            "version: 1\n"
+            f"last_updated: {last_updated}\n"
+        )
+
+    def test_valid_comment_targets_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "comment-targets",
+                self._minimal_comment_targets_frontmatter(),
+            )
+            issues = vv.validate_note(path, COMMENT_TARGETS_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_last_updated_field_errors(self):
+        fm = self._minimal_comment_targets_frontmatter().replace(
+            "last_updated: 2026-09-17\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "comment-targets", fm)
+            issues = vv.validate_note(path, COMMENT_TARGETS_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("last_updated" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_comment_targets_frontmatter().replace(
+            "id: comment-targets\n", "id: comment-targets-wrong\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "comment-targets", fm)
+            issues = vv.validate_note(path, COMMENT_TARGETS_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
 class RouteNoteSpecTests(unittest.TestCase):
     """Covers the multi-spec-per-folder routing added alongside the
     Substack expansion (Drafts/ now holds both `draft` and
@@ -730,13 +780,21 @@ class RouteNoteSpecTests(unittest.TestCase):
         )
         self.assertIs(match, ALGORITHM_RULES_SPEC)
 
+    def test_routes_comment_targets_type_to_comment_targets_spec(self):
+        match = vv.route_note_spec(
+            {"type": "comment-targets"},
+            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
+             ALGORITHM_RULES_SPEC, COMMENT_TARGETS_SPEC],
+        )
+        self.assertIs(match, COMMENT_TARGETS_SPEC)
+
     def test_unmatched_type_in_content_learnings_returns_none(self):
         # playbook.md / voice-guide.md carry `type: playbook` / `type:
         # voice-guide` — neither matches any registered spec.
         match = vv.route_note_spec(
             {"type": "playbook"},
             [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
-             ALGORITHM_RULES_SPEC],
+             ALGORITHM_RULES_SPEC, COMMENT_TARGETS_SPEC],
         )
         self.assertIsNone(match)
 
@@ -753,6 +811,12 @@ class PermissiveFolderTests(unittest.TestCase):
 
     def test_content_learnings_specs_are_permissive(self):
         self.assertTrue(vv.is_permissive_folder([STORY_BANK_SPEC, HOOK_FORMULAS_SPEC]))
+
+    def test_content_learnings_specs_are_permissive_with_comment_targets(self):
+        self.assertTrue(vv.is_permissive_folder(
+            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
+             ALGORITHM_RULES_SPEC, COMMENT_TARGETS_SPEC]
+        ))
 
     def test_drafts_specs_are_not_permissive(self):
         self.assertFalse(vv.is_permissive_folder([DRAFT_SPEC, SUBSTACK_ARTICLE_SPEC]))
@@ -796,18 +860,19 @@ class GroupSpecsByFolderTests(unittest.TestCase):
         type_names = {s.type_name for s in by_folder["Published-Posts"]}
         self.assertEqual(type_names, {"post", "substack-ready"})
 
-    def test_content_learnings_folder_has_four_specs(self):
+    def test_content_learnings_folder_has_five_specs(self):
         # Was single-spec through Phase 15; Phase 16 (Hook Extractor) adds
         # hook-formulas alongside story-bank; Phase 18 (Humanizer) adds
         # humanizer-rules alongside both; Phase 19 (Post Audit) adds
-        # algorithm-rules alongside all three.
+        # algorithm-rules alongside all three; Phase 21 (Content Planner)
+        # adds comment-targets alongside all four.
         by_folder = vv.group_specs_by_folder(vv.SPECS)
-        self.assertEqual(len(by_folder["Content-Learnings"]), 4)
+        self.assertEqual(len(by_folder["Content-Learnings"]), 5)
         type_names = {s.type_name for s in by_folder["Content-Learnings"]}
         self.assertEqual(
             type_names,
             {"story-bank", "hook-formulas", "humanizer-rules",
-             "algorithm-rules"},
+             "algorithm-rules", "comment-targets"},
         )
 
 
