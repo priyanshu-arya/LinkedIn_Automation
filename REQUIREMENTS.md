@@ -2,7 +2,7 @@
 
 Status: **Draft — requirements captured, no implementation started.**
 Owner: Priyanshu Arya
-Last updated: 2026-09-17 (§29 added: Humanizer)
+Last updated: 2026-09-17 (§36 added: Employee Advocacy)
 
 ---
 
@@ -1147,3 +1147,112 @@ never posts a follow-up, a comment, or anything else itself; ICP labels
 are always suggestions pending the user's confirmation, never settled
 fact; no scraping, no session-cookie/unofficial API access, ever, per
 §27.
+
+---
+
+## 36. Employee Advocacy (Team Program Module)
+
+Added 2026-09-17. `/plan-advocacy` plans a **team** LinkedIn advocacy
+program — a 14-day launch, an ongoing posting-cadence recommendation,
+brand governance, and a self-reported ROI-tracking log — for a team of
+other people, most of whom aren't using this tool themselves. It is the
+last of the 11 skills added in this batch and, of all of them, the most
+standalone: it shares no dependency with any other skill in this repo.
+
+**This is a separate module**, same framing `/optimize-profile` already
+established for itself: a one-off/periodic program plan with a quarterly
+review cadence, not a recurring daily posting pipeline and not one of
+this repo's sequential, numbered Phases. It is **explicitly out of scope
+for the personal content pipeline's automated analytics (§12)** —
+everything this module produces is a planning-only deliverable, never a
+live-tracked metric pulled from an API.
+
+**The ROI-tracking limitation is permanent, not a TODO.** Confirmed
+against `pull-analytics/SKILL.md` (§9/§12): Buffer's API returns metrics
+only for the *primary user's own* scheduled/published posts. It has zero
+API access to any other person's individual LinkedIn account — there is
+no plan, no upgrade path, and no unofficial workaround this repo will
+ever adopt (same rejection of scraping/session-cookie access as §25.3
+and §27). Any team member's individual post performance can only ever be
+**self-reported** by that person, sourced from their own screenshots.
+This is stated plainly in the skill's own description and in every
+report it produces, not softened into "not yet built."
+
+### Hard input contract
+
+Same discipline as `/optimize-profile`'s "exactly two JDs": stop and ask
+rather than guess. Required: company/team name; a roster (name + role +
+LinkedIn profile URL per person, used only for the plan document, never
+fetched or scraped, per §27's discipline against unofficial access to a
+third party's profile); a program goal, exactly one of brand-awareness /
+hiring / thought-leadership / sales-pipeline. Optional: an existing
+brand-voice/guidelines doc (if absent, dos/don'ts are drafted from
+scratch and every item is flagged `[DRAFTED — CONFIRM WITH LEGAL/
+COMMS]`); target content pillars (default: this repo's §2 15-pillar menu,
+offered as a starting point the team can narrow); a launch date.
+
+### Deliverable and storage
+
+New top-level `Employee-Advocacy/` folder — same precedent as
+`Profile-Optimization/`: a periodic, re-runnable artifact accumulating
+history across runs, not part of the recurring content pipeline. Two
+files per program run:
+- `Employee-Advocacy/YYYY-MM-DD--<company-slug>-program.md`, from
+  `_Templates/Employee-Advocacy-Note.md` — the program plan (roster,
+  brand dos/don'ts, 14-day launch plan, ongoing cadence recommendation,
+  approval chain, escalation path).
+- `Employee-Advocacy/YYYY-MM-DD--<company-slug>-metrics-log.md`, from
+  `_Templates/Advocacy-Metrics-Log.md` — **one shared log for the whole
+  team**, never per-person files, that team members fill in
+  periodically with self-reported, screenshot-sourced numbers.
+
+### Approval chain and escalation
+
+Since this tool cannot access or approve another person's draft, the
+realistic default is a spot-check pattern: advocates share drafts in a
+shared channel/doc during the first 14 days, tapering to self-serve
+after. Escalation for anything off-brand that goes live is a named
+point-of-contact (comms/manager) plus a 2-step process — private flag,
+then a takedown request — and is **human-triggered only**: this skill
+cannot itself detect or monitor a team member's feed for off-brand
+content, the same class of gap §35 already established for third-party
+engagement data.
+
+### Rollup, not analytics
+
+On a re-run against an existing program, the skill aggregates whatever
+rows already exist in the metrics log into a simple rollup: most-active
+contributor, most-engaged post (by self-reported numbers), and
+participation rate (# of roster members who submitted at least one entry
+/ roster size). Participation rate is a **completion-rate statistic**,
+never labeled "engagement analytics" — it measures who reported, not how
+any post actually performed. A missing self-report is never treated as
+zero, same null-handling discipline as `pull-analytics`.
+
+### Vault schema
+
+`scripts/validate_vault.py` gains two new NoteSpecs for a brand-new
+`Employee-Advocacy/` folder: `employee-advocacy` (required `id`/`type`/
+`status`/`company`/`launch_date`/`roster_size`/`primary_goal`/`history`;
+status enum `{draft, active, placeholder}`; `primary_goal` checked
+against a closed 4-value list — brand-awareness / hiring /
+thought-leadership / sales-pipeline) and `advocacy-metrics-log`
+(required `id`/`type`/`program_id`/`last_updated`). Unlike
+`Content-Learnings/` and `Engagement/`, this folder is
+**`permissive_folder=False`** (the default): it starts clean with only
+these two intended types from day one — no pre-existing untyped files to
+protect — so an unmatched `type` here is treated as a real schema error,
+the same posture already applied to `Drafts/` and `Published-Posts/`.
+
+### Hard rules
+
+Never claims automated tracking of any team member's individual account
+performance — the Buffer-scoping limitation above is stated plainly,
+every time; never fabricates a self-reported metric on someone's behalf;
+never treats a missing self-report as zero; brand-guidance items not
+sourced from a real company doc are always labeled `[DRAFTED — CONFIRM
+WITH LEGAL/COMMS]`; never stores a team member's personal contact info
+beyond name/role/profile URL already given; never posts, schedules, or
+accesses any team member's LinkedIn account — output is a planning
+document only, same "produces the deliverable, human executes it"
+precedent as image generation (§7) and Substack publishing (§25.3).

@@ -56,6 +56,14 @@ ENGAGEMENT_GOALS = {"likes", "comments", "shares", "saves", "profile-visits"}
 # real source types).
 SOURCE_TYPES = {"tweet", "thread", "youtube", "blog", "newsletter"}
 
+# Single-value `primary_goal` field (Employee Advocacy module,
+# /plan-advocacy), checked when a spec sets primary_goal_key — same
+# optional-if-present pattern as ENGAGEMENT_GOALS/SOURCE_TYPES above. Closed
+# 4-value list per REQUIREMENTS.md §36 — a program states exactly one goal,
+# never a mix.
+PRIMARY_GOALS = {"brand-awareness", "hiring", "thought-leadership",
+                  "sales-pipeline"}
+
 ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}--[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -78,6 +86,10 @@ class NoteSpec:
     # checked against SOURCE_TYPES if present (Phase 20 Repurposer); None for
     # every spec except "draft", since only Draft Notes carry this field.
     source_type_key: str | None = None
+    # checked against PRIMARY_GOALS if present (Employee Advocacy module,
+    # /plan-advocacy); None for every spec except "employee-advocacy", since
+    # only that note type carries this field.
+    primary_goal_key: str | None = None
     # A pair of keys where exactly one must be non-empty (Phase 17 Post
     # Writer's idea-path-vs-spine-path split): None for every spec except
     # "draft", where it's ("idea_id", "spine_id") — an idea-drafted note
@@ -429,6 +441,59 @@ SPECS = [
         category_key=None,
         permissive_folder=True,
     ),
+    # Added for the Employee Advocacy module (/plan-advocacy,
+    # REQUIREMENTS.md §36) — a separate, periodic team-program-planning
+    # module (same class as Profile-Optimization/), not a numbered Phase in
+    # the sequential Research->Draft->Schedule pipeline. New top-level
+    # `Employee-Advocacy/` folder holds two note types from day one: the
+    # program plan itself (`employee-advocacy`) and one shared, self-
+    # reported metrics log per program (`advocacy-metrics-log`).
+    #
+    # Unlike Content-Learnings/ and Engagement/ above, this folder is left
+    # at permissive_folder=False (the default) rather than True. Those two
+    # folders opted into permissive_folder because they hold, or started
+    # with, types no single NoteSpec was ever meant to strictly validate
+    # (Content-Learnings/ inherited pre-existing untyped living docs like
+    # playbook.md/voice-guide.md) or because their authors judged an
+    # unmatched type there as expected. Employee-Advocacy/ starts clean:
+    # only these two intended types will ever land here, so an unrecognized
+    # `type` (a typo, a missing field, a stray file) is far more likely a
+    # real schema error than an intentionally-unvalidated file — the same
+    # reasoning that already keeps Drafts/ and Published-Posts/ non-
+    # permissive despite each also holding two specs.
+    NoteSpec(
+        "employee-advocacy", "Employee-Advocacy", False,
+        required_keys=["id", "type", "status", "company", "launch_date",
+                        "roster_size", "primary_goal", "history"],
+        # `roster_size` is intentionally excluded from nonempty_scalar_keys,
+        # same treatment as profile-optimization's current_score/
+        # projected_score: it's a numeric field whose string form ("0")
+        # would never trip the empty-string check anyway, and the schema
+        # only needs to confirm the key is present.
+        nonempty_scalar_keys=["id", "type", "status", "company",
+                               "launch_date", "primary_goal"],
+        nonempty_list_keys=["history"],
+        status_key="status",
+        status_enum={"draft", "active", "placeholder"},
+        category_key=None,
+        primary_goal_key="primary_goal",
+        permissive_folder=False,
+    ),
+    # Second and last registered spec for Employee-Advocacy/ — one shared
+    # log per program (never per-person files), filled in by team members
+    # over time. No `status` field on this note type (same shape as
+    # story-bank/hook-formulas/icp-map/engagement-audience above) — it has
+    # no lifecycle of its own, it just accumulates self-reported rows.
+    NoteSpec(
+        "advocacy-metrics-log", "Employee-Advocacy", False,
+        required_keys=["id", "type", "program_id", "last_updated"],
+        nonempty_scalar_keys=["id", "type", "program_id", "last_updated"],
+        nonempty_list_keys=[],
+        status_key=None,
+        status_enum=None,
+        category_key=None,
+        permissive_folder=False,
+    ),
 ]
 
 
@@ -615,6 +680,14 @@ def validate_note(path: Path, spec: NoteSpec) -> list[Issue]:
             issues.append(Issue(
                 "ERROR", path,
                 f"'{spec.source_type_key}: {src_type}' is not one of {sorted(SOURCE_TYPES)}",
+            ))
+
+    if spec.primary_goal_key and spec.primary_goal_key in data:
+        goal = str(data[spec.primary_goal_key]).strip()
+        if goal and goal not in PRIMARY_GOALS:
+            issues.append(Issue(
+                "ERROR", path,
+                f"'{spec.primary_goal_key}: {goal}' is not one of {sorted(PRIMARY_GOALS)}",
             ))
 
     note_id = str(data.get("id", "")).strip()
