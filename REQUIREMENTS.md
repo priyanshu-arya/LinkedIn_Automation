@@ -717,3 +717,77 @@ section for the full, authoritative version):
 claim, source, or number in a draft; that discipline stays
 `/critique-draft`'s job (§14/§21). Humanizer rewrites how something is
 said, never what is claimed.
+
+---
+
+## 30. Pre-Publish Algorithm & Authenticity Audit (Post Audit)
+
+Added 2026-09-17 (Phase 19). `/audit-draft` runs on a Draft Note that has
+already been through `/critique-draft` and sits at `status: in_review` —
+after the accuracy/originality/viral-score pass, before `/review-drafts`
+presents the note for human approval. It checks the draft against current
+LinkedIn platform-mechanics behavior and screens it for AI-writing tells,
+then **annotates the note with a `## Post Audit Notes` section**. It never
+changes `status` itself — the same non-gating role for this dimension that
+`/critique-draft`'s viral-score check already plays for originality (§14):
+a finding here is information for the human reviewer, not an automatic
+block.
+
+**Pipeline position:** `/write-draft` → `/critique-draft` (`draft →
+in_review`) → `/audit-draft` (this skill — annotation only) →
+`/review-drafts` (`in_review → approved`, the only skill allowed to make
+that transition) → `/schedule-approved`.
+
+**Three-tier confidence structure.** Every finding `/audit-draft` cites
+from `Content-Learnings/algorithm-rules.md` carries one of three tiers,
+and they are never blended or presented with equal weight:
+- **Sourced Findings** — each names its real source (e.g. the 360Brew
+  paper, AuthoredUp's 2026 reach data, Van der Blom's algorithm-insights
+  analysis, a named LinkedIn VP Product statement).
+- **Verified Numeric Thresholds** — hard numbers checked directly against
+  the draft (length sweet spot, hook-truncation cutoffs, hashtag count,
+  external-link-in-body penalty, closing-question lift, posting-window
+  fit).
+- **Unconfirmed / Third-Party Claims** — explicitly low-confidence
+  (pod-detection accuracy, comment-pod penalties, link-in-first-comment
+  lift, save-to-like weighting, and similar reported-but-unofficial
+  figures). These are always cited as "reported, unconfirmed" — per §21
+  (never present an unconfirmed claim with the same confidence as a
+  verified one), `/audit-draft` never lets one of these fail a check or
+  read as settled fact.
+
+**90-day self-refresh policy.** `Content-Learnings/algorithm-rules.md`
+carries a `last_updated` date and is treated as stale after 90 days (or if
+the file doesn't exist yet). `/audit-draft` checks this on every run — if
+stale, it re-researches via `WebSearch` against official LinkedIn
+engineering/creator statements and reputable aggregators (Buffer,
+Hootsuite, Social Insider, AuthoredUp — the same sourcing bar as §11's
+posting-time research) before applying the audit, then rewrites the file
+with fresh findings, preserving the three-tier structure. This is the same
+lazy "self-refresh on use" pattern `/generate-visual` already applies to
+live visual-trend research (§7) — there is no separate cron/scheduled job
+keeping this file current.
+
+**AI-detection is delegated, never duplicated.** `/audit-draft` does not
+re-implement any of Humanizer's vocabulary/em-dash/pattern-density
+detection logic. It calls `/humanize-draft`'s own documented Input/Output
+Contract (§29; `.claude/skills/humanize-draft/SKILL.md`) directly — `text`
+= the draft body, `platform` = the draft's platform — and surfaces the
+returned `score_report` and `caveats` verbatim in its own output. If
+Humanizer also returns a suggested rewrite, `/audit-draft` reports it but
+does not apply it; applying an edit stays `/critique-draft`'s,
+`/humanize-draft`'s (run directly with intent to revise), or a manual
+edit's job.
+
+**Annotation only — hard rules.** `/audit-draft` never changes `status`,
+never auto-schedules or auto-publishes, never fabricates an algorithm rule
+without a cited, tiered source, and never auto-revises the draft text
+itself. Its output is a `## Post Audit Notes` section on the Draft Note
+(algorithm findings tagged by confidence tier, Humanizer's full output,
+and the rules file's freshness status) plus a `history` entry — nothing
+more.
+
+*Reference material for `Content-Learnings/algorithm-rules.md`'s seed data
+adapted (not copied verbatim) from the MIT-licensed
+`sergebulaev/linkedin-skills` project — see that file's own header for the
+full attribution.*

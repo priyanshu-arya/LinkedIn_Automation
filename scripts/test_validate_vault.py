@@ -484,6 +484,54 @@ class ValidateNoteHumanizerRulesTests(unittest.TestCase):
             self.assertTrue(any("filename stem" in m for m in messages), messages)
 
 
+ALGORITHM_RULES_SPEC = spec_by("algorithm-rules", "Content-Learnings")
+
+
+class ValidateNoteAlgorithmRulesTests(unittest.TestCase):
+    """Covers the Phase 19 (Post Audit) algorithm-rules NoteSpec: the
+    fourth registered spec for Content-Learnings/, added alongside
+    story-bank, hook-formulas, and humanizer-rules — same single-living-doc
+    shape, no `status` field."""
+
+    def _minimal_algorithm_rules_frontmatter(self, last_updated: str = "2026-09-17") -> str:
+        return (
+            "id: algorithm-rules\n"
+            "type: algorithm-rules\n"
+            "version: 1\n"
+            f"last_updated: {last_updated}\n"
+        )
+
+    def test_valid_algorithm_rules_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "algorithm-rules",
+                self._minimal_algorithm_rules_frontmatter(),
+            )
+            issues = vv.validate_note(path, ALGORITHM_RULES_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_last_updated_field_errors(self):
+        fm = self._minimal_algorithm_rules_frontmatter().replace(
+            "last_updated: 2026-09-17\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "algorithm-rules", fm)
+            issues = vv.validate_note(path, ALGORITHM_RULES_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("last_updated" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_algorithm_rules_frontmatter().replace(
+            "id: algorithm-rules\n", "id: algorithm-rules-wrong\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "algorithm-rules", fm)
+            issues = vv.validate_note(path, ALGORITHM_RULES_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
 class RouteNoteSpecTests(unittest.TestCase):
     """Covers the multi-spec-per-folder routing added alongside the
     Substack expansion (Drafts/ now holds both `draft` and
@@ -541,12 +589,21 @@ class RouteNoteSpecTests(unittest.TestCase):
         )
         self.assertIs(match, HUMANIZER_RULES_SPEC)
 
+    def test_routes_algorithm_rules_type_to_algorithm_rules_spec(self):
+        match = vv.route_note_spec(
+            {"type": "algorithm-rules"},
+            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
+             ALGORITHM_RULES_SPEC],
+        )
+        self.assertIs(match, ALGORITHM_RULES_SPEC)
+
     def test_unmatched_type_in_content_learnings_returns_none(self):
         # playbook.md / voice-guide.md carry `type: playbook` / `type:
         # voice-guide` — neither matches any registered spec.
         match = vv.route_note_spec(
             {"type": "playbook"},
-            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC],
+            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
+             ALGORITHM_RULES_SPEC],
         )
         self.assertIsNone(match)
 
@@ -606,15 +663,18 @@ class GroupSpecsByFolderTests(unittest.TestCase):
         type_names = {s.type_name for s in by_folder["Published-Posts"]}
         self.assertEqual(type_names, {"post", "substack-ready"})
 
-    def test_content_learnings_folder_has_three_specs(self):
+    def test_content_learnings_folder_has_four_specs(self):
         # Was single-spec through Phase 15; Phase 16 (Hook Extractor) adds
         # hook-formulas alongside story-bank; Phase 18 (Humanizer) adds
-        # humanizer-rules alongside both.
+        # humanizer-rules alongside both; Phase 19 (Post Audit) adds
+        # algorithm-rules alongside all three.
         by_folder = vv.group_specs_by_folder(vv.SPECS)
-        self.assertEqual(len(by_folder["Content-Learnings"]), 3)
+        self.assertEqual(len(by_folder["Content-Learnings"]), 4)
         type_names = {s.type_name for s in by_folder["Content-Learnings"]}
         self.assertEqual(
-            type_names, {"story-bank", "hook-formulas", "humanizer-rules"}
+            type_names,
+            {"story-bank", "hook-formulas", "humanizer-rules",
+             "algorithm-rules"},
         )
 
 
