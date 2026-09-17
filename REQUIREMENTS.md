@@ -975,3 +975,36 @@ pattern as the four existing entries (`story-bank`, `hook-formulas`,
 `humanizer-rules`, `algorithm-rules`) — the user-maintained `## Targets`
 table itself is not schema-validated, the same way none of those four
 files' body tables are.
+
+---
+
+## 33. Comment Drafting (Comment Drafter)
+
+Added 2026-09-17 (Phase 22). `/draft-comment` drafts a comment on someone
+else's LinkedIn post, in the user's own voice — a lightweight, mostly
+ephemeral utility, not a new stage of the Research → Draft → Approve →
+Schedule pipeline.
+
+**Input** follows §27's shared convention exactly — pasted post text is
+the primary, reliable input; a URL alone is optional metadata and a
+WebFetch attempt on it is best-effort convenience only, never ground truth
+without the user's explicit confirmation. Nothing here adds to or narrows
+§27 — this is one of the three skills (alongside `/extract-hook`, plus
+the not-yet-built Reply Handler and Engagement Monitor) that cross-
+reference it rather than restating it.
+
+**Output is always ephemeral copy-paste text.** No vault artifact is
+created: no Draft Note, no `Drafts/` entry, no `status: draft`/`in_review`
+lifecycle, no entry in the approval pipeline (§8) or the Content Planner's
+calendar (§32). This is the key difference from every other drafting skill
+in this repo — a LinkedIn/X/Substack post draft is a vault-tracked object
+because it eventually gets approved and scheduled; a comment on someone
+else's post never does, so it never needs the schema that exists to
+support that lifecycle.
+
+**No comment-posting API exists anywhere in this repo.** Buffer covers
+only the user's own scheduling/publishing/analytics (§9), never posting a
+comment onto a third party's content. Same limitation class as §27's "no
+read API for arbitrary third-party posts" — the output here is always
+handed to the user to paste in manually; this skill never claims to have
+posted anything.
