@@ -1256,3 +1256,89 @@ beyond name/role/profile URL already given; never posts, schedules, or
 accesses any team member's LinkedIn account — output is a planning
 document only, same "produces the deliverable, human executes it"
 precedent as image generation (§7) and Substack publishing (§25.3).
+
+---
+
+## 37. Plagiarism / Originality Check
+
+Added 2026-09-17 (Phase 25). `/check-plagiarism` checks whether a draft
+too closely echoes existing third-party content — distinguishing a
+properly cited/paraphrased claim (expected and fine, especially for
+Research-pillar posts per §2, which requires actually reading the source
+paper and explaining it in the author's own plain-language take) from an
+uncredited near-verbatim lift. It is now wired as an **automatic
+sub-step of `/audit-draft`** (§30), not a separate manual pipeline stage
+the user has to remember to run — `/audit-draft` calls it the same way it
+already calls `/humanize-draft`'s contract, and surfaces its output in
+the same `## Post Audit Notes` annotation, under a dedicated
+`### Originality Check` subsection. It remains callable standalone too.
+
+**Two-layer design, both honestly scoped.**
+- **Internal-overlap layer — real, automated, buildable today.** For
+  each id in the draft's `sources[]` field that resolves to a real
+  `Content-Research/` Research Note, `/check-plagiarism` extracts that
+  note's Summary/Key Findings text (which may itself quote or closely
+  paraphrase the original paper/article — see
+  `_Templates/Research-Note.md`) and **invokes the pre-existing,
+  globally-available `plagiarism-remover` skill** — not part of this
+  repo — against the draft span that summarizes that source. This
+  catches patchwriting-level closeness (same sentence order/shape as the
+  source, just swapped synonyms) even when both the draft and the
+  research note are already legitimately in this vault. `/check-plagiarism`
+  invokes `plagiarism-remover` for this; it does not reimplement any of
+  its structural-closeness detection logic itself.
+- **External-check layer — honest, manual-only, permanently.** This
+  layer only ever catches overlap with sources this vault's own research
+  pipeline already fetched. It says nothing about whether the draft's
+  phrasing happens to closely match some OTHER webpage or post nobody
+  cited — checking that requires a real web-scale plagiarism-detection
+  service (Copyscape, Originality.ai, Turnitin, Grammarly). No API key
+  for any of them exists anywhere in this repo — the same class of
+  limitation §29 already established for Humanizer's multi-detector
+  spread check (no GPTZero/Originality.ai/ZeroGPT/Sapling/Copyleaks keys
+  configured either), confirmed the same way and stated as a **permanent
+  design stance, not a TODO**: no plagiarism-detection API should be
+  added later to quietly automate this layer. `/check-plagiarism`
+  produces the finished draft text plus a short instruction block asking
+  the user to run it through a real checker themselves and report back
+  whatever result they get. If supplied, it's recorded verbatim; if not,
+  the output stays honestly `not_run` — never assumed clean, and never
+  silently reinterpreted as "clean" just because time has passed since
+  the last run.
+
+**Input/output contract** (the stable interface `/audit-draft` and any
+future caller invoke this skill through — see
+`.claude/skills/check-plagiarism/SKILL.md`'s own "Input / Output
+Contract" section for the full, authoritative version):
+- **Input:** `text` (the draft body), `sources` (the draft's `sources[]`
+  list of Research Note ids, or Story Bank row ids on a `--spine`-path
+  draft), optional `draft_id` (if given and a real Draft Note with that
+  id exists, a `history` entry is logged on it).
+- **Output:** `internal_overlap_report` — a list of `{source_id, span,
+  verdict}` entries, `verdict` being one of `cited-paraphrase-ok`,
+  `flagged-patchwriting` (from invoking `plagiarism-remover`), or
+  `no-overlap-detected`, plus a separate `unresolved_source` entry for
+  any source id that doesn't resolve to a real note; `external_check` —
+  `{status: "not_run" | "manual_results_provided", service?, result?,
+  note}`, starting and staying `"not_run"` until the user actually
+  supplies a real result; and a `caveats` string that is always present,
+  every call, stating plainly that a `not_run` external check means no
+  real originality verification against the broader web has happened
+  yet, and that even a `manual_results_provided` result from one service
+  is not a guarantee (mirrors §29's own detector-disagreement honesty).
+
+**Structural-closeness detection is delegated, never duplicated.**
+`/check-plagiarism` does not re-implement `plagiarism-remover`'s
+patchwriting/clause-order comparison logic — it invokes the actual skill
+against the relevant draft span and source text, and records what comes
+back, the same discipline §30 already established for `/audit-draft`'s
+own relationship to `/humanize-draft`.
+
+**Hard rules.** Never claims an external check happened when it didn't;
+never calls any plagiarism-detection API (none exist, none should be
+added — permanent stance); never fabricates a similarity score or a
+"this is X% original" number under any circumstance; the internal-overlap
+layer only ever compares against sources this vault's own research
+pipeline already legitimately fetched — it makes no claim about the wider
+internet; never invents a `Content-Research/` note, Story Bank row, or
+Draft Note to satisfy an id that doesn't actually resolve.

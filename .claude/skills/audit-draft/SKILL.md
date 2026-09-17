@@ -1,15 +1,17 @@
 ---
 name: audit-draft
-description: Use when the user asks to check a draft against current LinkedIn algorithm/ranking behavior or for AI-detection risk before scheduling, or explicitly invokes /audit-draft. Runs on a status:in_review Draft Note (after /critique-draft, before /review-drafts): checks platform-mechanics compliance against Content-Learnings/algorithm-rules.md (refreshing it via live research if >90 days stale) and screens for AI-writing tells by calling /humanize-draft's shared detection contract, annotating the note with a `## Post Audit Notes` section — never changes its approval status. Distinguishes sourced/verified rules from unconfirmed third-party claims in every finding it cites.
+description: Use when the user asks to check a draft against current LinkedIn algorithm/ranking behavior, for AI-detection risk, or for plagiarism/originality risk before scheduling, or explicitly invokes /audit-draft. Runs on a status:in_review Draft Note (after /critique-draft, before /review-drafts): checks platform-mechanics compliance against Content-Learnings/algorithm-rules.md (refreshing it via live research if >90 days stale), screens for AI-writing tells by calling /humanize-draft's shared detection contract, and screens for plagiarism/originality risk by calling /check-plagiarism's shared contract, annotating the note with a `## Post Audit Notes` section — never changes its approval status. Distinguishes sourced/verified rules from unconfirmed third-party claims in every finding it cites.
 ---
 
 # Post Audit (Pre-Publish Algorithm & Authenticity Audit — Phase 19)
 
 Checks a draft that has already cleared `/critique-draft` against current
-LinkedIn platform-mechanics behavior, and separately screens it for
-AI-writing tells by calling `/humanize-draft`'s own contract. Annotates the
-note with what it found. **Never changes `status`, never auto-revises the
-draft, never schedules or publishes anything.** This is a gate that adds
+LinkedIn platform-mechanics behavior, separately screens it for
+AI-writing tells by calling `/humanize-draft`'s own contract, and
+separately screens it for plagiarism/originality risk by calling
+`/check-plagiarism`'s own contract. Annotates the note with what it
+found. **Never changes `status`, never auto-revises the draft, never
+schedules or publishes anything.** This is a gate that adds
 information for the human reviewer, the same non-gating role for platform
 mechanics that `/critique-draft`'s viral-score check already plays for
 originality — it surfaces a finding, it does not act on it.
@@ -127,7 +129,24 @@ them to the Draft Note yourself; that's an edit decision for
 a manual edit during `/review-drafts`, not something this read-only audit
 gate does on the note's behalf.
 
-### 5. Append `## Post Audit Notes` to the Draft Note
+### 5. Originality pass — call `/check-plagiarism`'s contract directly
+Invoke `/check-plagiarism` using its documented Input/Output Contract
+(`.claude/skills/check-plagiarism/SKILL.md`):
+- `text` = this draft's `## Post Text` body.
+- `sources` = this draft's `sources[]` frontmatter field.
+- `draft_id` = this draft's `id` (so `/check-plagiarism`'s own
+  history-logging behavior applies normally if it finds a matching note).
+
+Take the returned `internal_overlap_report`, `external_check`, and
+`caveats` and surface them **verbatim** in this skill's own output — do
+not re-run, re-derive, or approximate `plagiarism-remover`'s own
+patchwriting/structural-closeness detection (which `/check-plagiarism`
+invokes internally), and do not assume `external_check` is anything other
+than whatever status `/check-plagiarism` actually returns (almost always
+`not_run`, since no plagiarism-detection API is configured anywhere in
+this repo — see REQUIREMENTS.md §37).
+
+### 6. Append `## Post Audit Notes` to the Draft Note
 Add a new section to the note body (after any existing `## Critic Notes`)
 containing:
 - **Algorithm findings** — each check from step 3, tagged pass/flagged,
@@ -135,15 +154,20 @@ containing:
   (Sourced/Verified/Unconfirmed) cited inline.
 - **Humanizer output** — the full `score_report` and `caveats` string from
   step 4, verbatim.
+- **`### Originality Check`** — a clearly-labeled subsection with the full
+  `internal_overlap_report` (per-source verdicts from step 5),
+  `external_check`'s current status (and its recorded result if one was
+  ever supplied), and `/check-plagiarism`'s `caveats` string, verbatim.
 - **Rules file status** — `algorithm-rules.md`'s `last_updated` date and
   whether it was fresh, or refreshed this run.
 - Date of this audit run.
 
 Append `{action: audited, date, note: "<one-line summary, e.g. '2 flags:
-hashtag count, closing question'>"}` to the note's `history`.
+hashtag count, closing question; 1 source flagged patchwriting'>"}` to the
+note's `history`.
 
-### 6. Never change `status`
-Regardless of what step 3/4 find — even a draft with several flags stays
+### 7. Never change `status`
+Regardless of what step 3/4/5 find — even a draft with several flags stays
 exactly `status: in_review`. Flags are information for `/review-drafts`
 and the human reviewer, never an automatic block.
 
@@ -152,7 +176,9 @@ and the human reviewer, never an automatic block.
 Per draft: pass/flagged for each algorithm check with the exact rule +
 confidence tier cited for every flag, the full Humanizer output
 (`score_report` + `caveats`, and `revised_text`/`changes_made` if
-Humanizer returned them), and the rules file's freshness status (including
+Humanizer returned them), the full originality-check output
+(`internal_overlap_report` + `external_check` + `caveats` from
+`/check-plagiarism`), and the rules file's freshness status (including
 whether a refresh ran this turn and what changed in it, if so). State
 plainly that `status` is unchanged and the draft is still waiting at
 `in_review` for `/review-drafts`.
@@ -171,6 +197,14 @@ plainly that `status` is unchanged and the draft is still waiting at
   detection logic — always calls `/humanize-draft`'s actual documented
   contract and surfaces its real output verbatim, never a re-derived
   approximation of it.
+- Never re-implements `/check-plagiarism`'s internal-overlap logic, nor
+  the patchwriting/structural-closeness detection logic of
+  `plagiarism-remover` that `/check-plagiarism` itself invokes — always
+  calls `/check-plagiarism`'s actual documented contract and surfaces its
+  real output verbatim.
+- Never presents `/check-plagiarism`'s `external_check` as anything other
+  than what it actually returned — a `not_run` status is never reported
+  as, or implied to mean, "checked and clean."
 - Never presents an `Unconfirmed / Third-Party Claim` with the same
   confidence as a `Verified Numeric Threshold` or `Sourced Finding` — every
   citation carries its tier, every time, not just on first mention.
