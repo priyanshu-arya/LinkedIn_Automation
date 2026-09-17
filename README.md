@@ -25,6 +25,7 @@
 - [🎯 Personalization & User Preferences](#-personalization--user-preferences)
 - [🚀 Quickstart & Setup](#-quickstart--setup)
 - [🖥️ Connecting to Claude Desktop](#️-connecting-to-claude-desktop)
+- [🧭 Connecting to Codex (CLI / IDE)](#-connecting-to-codex-cli--ide)
 - [🔄 End-to-End Workflow Walkthrough](#-end-to-end-workflow-walkthrough)
 - [📝 Knowledge Base & Note Schemas](#-knowledge-base--note-schemas)
 - [📊 Scoring Rubrics](#-scoring-rubrics)
@@ -80,7 +81,7 @@ flowchart TD
 ## ✨ Core Capabilities
 
 - **🕵️ Primary-Source Grounding:** Queries live sources, fetches documentation and repository data directly, and verifies claims before saving research. Hallucinated benchmarks, invented statistics, and unsourced quotes are explicitly rejected. Fetched web content is always treated as data to extract facts from, never as instructions to follow.
-- **🧠 11 Single-Responsibility Skills:** Modularity through separate, manually-triggered prompt skills (Trend Scout, Research Agent, Idea Ranker, Content Strategist, LinkedIn Writer, Visual Designer, Quality Critic, Approval Manager, Scheduler, Growth Agent, plus the `generate-week` weekly orchestrator that chains the others through isolated per-post subagents) — not independent autonomous agents; one session runs them sequentially on command.
+- **🧠 37 Single-Responsibility Skills:** Modularity through separate, manually-triggered prompt skills, grouped into the core production pipeline (Trend Scout, Idea Ranker, Content Strategist, Writer, Critic, Visual Designer, Approval Manager, Scheduler, Analytics, Growth Agent — repeated per platform, plus `generate-week*` weekly orchestrators that chain them through isolated per-post subagents), quality/safety tools (Humanizer, Post Audit, Plagiarism/Originality Check), engagement tools (Comment Drafter, Reply Handler, Engagement Monitor), and standalone modules (Profile Optimizer, Story Bank Interviewer, Hook Extractor, Repurposer, Employee Advocacy). See the full [Multi-Agent Skills Matrix](#-multi-agent-skills-matrix) — not independent autonomous agents; one session runs them sequentially on command.
 - **🗃️ Obsidian-Native Vault:** Stored entirely in clean, readable Markdown with structured YAML frontmatter and bi-directional `[[wikilinks]]`. No vendor lock-in database.
 - **🛡️ 100% Human Editorial Control:** Zero automatic publishing. Every single draft must pass through an interactive terminal/IDE approval interface supporting 7 decision paths (*Approve, Edit, Regenerate, Change Hook, Change Image, Change Time, Reject*).
 - **📈 Self-Improving Playbook:** Learns from real audience data. The system extracts winning hook formats, optimal word lengths, high-resonance topics, and posting times into a versioned playbook.
@@ -133,7 +134,19 @@ LinkedIn_Automation/
 │       ├── write-draft-substack-note/     # Substack: short-form Note drafting
 │       ├── critique-draft-substack-note/  # Substack: fact check & viral scoring
 │       ├── publish-substack/         # Substack: manual publish handoff (no API)
-│       └── generate-week-substack/   # Substack weekly orchestrator (article + Notes)
+│       ├── generate-week-substack/   # Substack weekly orchestrator (article + Notes)
+│       │
+│       ├── interviewer/              # Story Bank onboarding/topic interview → Post Spines
+│       ├── extract-hook/             # Reverse-engineers hook formulas from pasted viral posts
+│       ├── humanize-draft/           # De-AI-ifies a draft's surface style, scores AI-tell density
+│       ├── audit-draft/              # Algorithm-compliance + AI-detection + plagiarism pre-publish audit
+│       ├── check-plagiarism/         # Internal patchwriting check + external-checker handoff
+│       ├── repurpose-post/           # Turns tweets/videos/blogs/newsletters into native LinkedIn posts
+│       ├── draft-comment/            # Drafts comments for other people's LinkedIn posts
+│       ├── draft-reply/              # Drafts replies to comments (single or whole-thread sweep)
+│       ├── monitor-engagement/       # Checks comment threads for author replies; groups likers by ICP
+│       ├── plan-advocacy/            # Team employee-advocacy program plan + self-reported metrics
+│       └── optimize-profile/         # Standalone profile rewrite + audit from a PDF export
 │
 ├── Content-Research/                 # Long-Term Research Memory (15 pillars)
 │   ├── AI/                           # Artificial Intelligence fundamentals
@@ -280,6 +293,41 @@ as the rest of this repo: every claim in the rewrite traces to an evidence
 ledger built from the PDF, and a suggestion the agent drafts to fill a gap is
 never treated as a fact until the user confirms it applies to them.
 
+### Story Bank & Voice Grounding
+
+| Command / Skill | Role | Description | Trigger |
+| :--- | :--- | :--- | :--- |
+| `/interviewer` | **Story Bank Interviewer** | Full onboarding interview that populates `Content-Learnings/story-bank.md` from scratch (or resumes it, skipping already-filled sections) with real roles, receipts with real numbers, turning points, scars, and defensible positions. Given a topic argument instead, runs a focused single-topic interview and turns it into a reusable Post Spine, handed off to `/write-draft --spine <id>`. Never invents an answer on the user's behalf. | Onboarding / Before first post |
+| `/extract-hook` | **Hook Extractor** | Reverse-engineers the opening-hook formula behind an existing viral post (pasted text; a URL is best-effort only) against the shared taxonomy in `Content-Learnings/hook-formulas.md`, returning a blank fill-in-the-blank template. Proposes a new taxonomy entry if nothing matches, rather than forcing a bad fit. | On Demand |
+
+### Quality, Safety & Originality Tools
+
+| Command / Skill | Role | Description | Trigger |
+| :--- | :--- | :--- | :--- |
+| `/humanize-draft [draft-id]` | **Humanizer** | Rewrites a draft's surface style against the scored rule set in `Content-Learnings/humanizer-rules.md`, scoring AI-vocabulary/em-dash/pattern density and producing a before/after report. Never claims to guarantee beating any specific AI-detector. | Before Scheduling |
+| `/audit-draft [draft-id]` | **Post Audit** | Runs on an `in_review` draft (after `/critique-draft`, before `/review-drafts`): checks platform-mechanics compliance against `Content-Learnings/algorithm-rules.md`, screens for AI-writing tells via the Humanizer's shared contract, and screens for plagiarism/originality risk via the Plagiarism Checker's shared contract. Annotates the note with a `## Post Audit Notes` section — never changes approval status itself. | Post-Critique, Pre-Review |
+| `/check-plagiarism [draft-id]` | **Plagiarism / Originality Check** | Automated internal-overlap check for patchwriting against cited `Content-Research/` sources, plus an honest external-check layer (no plagiarism-detection API is configured) that hands you copy-ready text and instructions for Copyscape/Originality.ai/Turnitin/Grammarly, recording only results you actually supply. | On Demand / via `/audit-draft` |
+
+### Repurposing & Cross-Platform
+
+| Command / Skill | Role | Description | Trigger |
+| :--- | :--- | :--- | :--- |
+| `/repurpose-post` | **Repurposer** | Turns a tweet/thread, YouTube video, blog post, or newsletter into a native LinkedIn post: re-hooks it for LinkedIn's fold, expands into the 900–1,300 character sweet spot with real added context (never padding), moves any link to a first-comment field, and runs the result through `/humanize-draft` before writing it to `Drafts/`. Asks for a manual paste rather than guessing if the source can't be reliably read. | On Demand |
+
+### Engagement & Community Tools
+
+None of these post anything automatically — LinkedIn exposes no API for reading arbitrary posts/comments or posting comments/replies in this pipeline, so every input here is a manual paste and every output is copy-ready text for you to post by hand.
+
+| Command / Skill | Role | Description | Trigger |
+| :--- | :--- | :--- | :--- |
+| `/draft-comment` | **Comment Drafter** | Given someone else's pasted LinkedIn post (+ optional context), writes 1–2 copy-paste-ready comment options in your own voice per `Content-Learnings/voice-guide.md`. | On Demand |
+| `/draft-reply` | **Reply Handler** | Given a single pasted comment, drafts one reply. Given a full pasted thread export, sweeps every top-level comment and reply, filters out low-value ones, and drafts the rest in one batch — correctly attributing who each reply addresses across LinkedIn's 2-level thread flattening. | On Demand |
+| `/monitor-engagement` | **Engagement Monitor** | Two manual-input workflows: (1) checks pasted comment threads for new replies from the post's author and drafts a follow-up via `/draft-reply`; (2) takes a pasted likers/commenters list and groups them by ICP fit (peer / aspirational / prospect) using `Content-Learnings/icp-map.md`. | On Demand |
+
+### Employee Advocacy (separate module)
+
+`/plan-advocacy` — a one-off/periodic program-planning tool, not part of the recurring posting pipeline. Produces a 14-day team launch plan (posting cadence per person, brand dos/don'ts, an approval chain) plus a self-reported metrics template for team members to fill in. Buffer access in this repo is scoped to your own channel only, so it cannot pull or automate analytics for anyone else's account — advocacy metrics are always self-reported.
+
 ---
 
 ## 🎯 Personalization & User Preferences
@@ -395,8 +443,60 @@ This project was built and is designed to run as a **Claude Code** project — t
 skills lean on Claude Code's native `Bash`, `WebSearch`/`WebFetch`, and
 whole-directory file read/write to operate on the vault, run
 `scripts/validate_vault.py`, and call Buffer's GraphQL API. Claude Desktop
-doesn't have those tools by default, so a couple of things need to be wired up
-before the skills behave the same way there:
+doesn't have those tools by default, so this repo ships a real, working bridge
+for it in [`mcp-server/`](mcp-server/) — a small Node MCP server that exposes
+vault file access *and* real Buffer scheduling/metrics calls as tools Desktop
+can call directly. Two ways to connect Desktop, pick one:
+
+### Option A — the bundled `linkedin-vault` MCP server (recommended, does everything)
+
+This is the only option that gives Desktop real Buffer scheduling and
+analytics, not just vault read/write.
+
+1. **Install its dependencies once:**
+   ```bash
+   cd mcp-server
+   npm install
+   ```
+2. **Register it in Claude Desktop's config** — `~/Library/Application
+   Support/Claude/claude_desktop_config.json` on macOS (`%APPDATA%\Claude\`
+   on Windows):
+   ```json
+   {
+     "mcpServers": {
+       "linkedin-vault": {
+         "command": "node",
+         "args": ["/absolute/path/to/LinkedIn_Automation/mcp-server/index.js"],
+         "env": { "VAULT_ROOT": "/absolute/path/to/LinkedIn_Automation" }
+       }
+     }
+   }
+   ```
+   **Restart Claude Desktop** after saving — it only reads this file at startup.
+3. **Create a Claude Desktop Project** for this vault, then paste the contents
+   of [`mcp-server/DESKTOP-PROJECT-INSTRUCTIONS.md`](mcp-server/DESKTOP-PROJECT-INSTRUCTIONS.md)
+   into that Project's **custom instructions**. This gives Desktop the same
+   scheduling/analytics rules `/schedule-approved` and `/pull-analytics`
+   follow in Claude Code, adapted to the `list_notes`/`read_note`/`write_note`/
+   `buffer_create_post`/`buffer_get_post_metrics`/`buffer_discover_channels`
+   tools this server exposes.
+4. **Enable the server for that conversation.** Desktop will prompt to allow
+   each tool the first time it's called.
+5. **Chat normally:** *"schedule this week's approved posts"*, *"how did last
+   week's posts perform"*, *"what's still waiting in review"*. Credentials
+   (`BUFFER_ACCESS_TOKEN`, `BUFFER_CHANNEL_ID`) are read from this vault's own
+   `.env` at call time by the server process — they are never duplicated into
+   the Desktop config.
+
+`buffer_create_post` makes a **real, live** scheduling call (same mutation
+`/schedule-approved` uses) — there's no dry-run mode, and nothing here
+auto-approves drafts; scheduling only ever acts on notes already `status:
+approved`. Full detail: [`mcp-server/README.md`](mcp-server/README.md).
+
+### Option B — filesystem-only (read/ideate, no scheduling)
+
+Lighter-weight if you only want Desktop to read/discuss the vault, not
+schedule anything:
 
 1. **Enable Skills.** In Claude Desktop, go to **Settings → Capabilities**
    and turn on **Skills**. Skills are uploaded as `.zip` files, one per skill —
@@ -404,30 +504,64 @@ before the skills behave the same way there:
    contain its `SKILL.md` at the zip root) and add it via **Add skill**. This
    gives Desktop the same prompt-level instructions Claude Code loads
    automatically as slash commands.
-2. **Give Desktop filesystem access to the vault.** Skills read and write
-   Markdown notes across `Content-Research/`, `Post-Ideas/`, `Drafts/`, etc.
-   Desktop has no native folder mount, so connect the official filesystem MCP
-   server pointed at this repo's path (**Settings → Developer/Connectors →
-   Add custom connector**, running
+2. **Give Desktop filesystem access to the vault** via the official
+   filesystem MCP server (**Settings → Developer/Connectors → Add custom
+   connector**, running
    `npx -y @modelcontextprotocol/server-filesystem "/path/to/LinkedIn_Automation"`).
-   Without this, Desktop can *talk about* the skills but can't actually read
-   or update your notes.
-3. **Enable Web Search.** `/research-topic` and `/generate-visual` depend on
-   live web search/fetch to verify primary sources. Turn on Desktop's built-in
-   **Web search** capability in the same Settings page.
-4. **Buffer scheduling stays Claude-Code-side.** `/schedule-approved` and
-   `/pull-analytics` make authenticated calls to Buffer's GraphQL API using
-   `BUFFER_ACCESS_TOKEN`. Desktop has no built-in HTTP/fetch tool for this —
-   either keep running those two skills from Claude Code, or wrap Buffer's API
-   in your own small MCP server and connect it the same way as step 2.
+3. **Enable Web Search** in the same Settings page — `/research-topic` and
+   `/generate-visual` depend on live web search/fetch to verify primary sources.
+4. Buffer scheduling isn't available this way — use Option A, or keep running
+   `/schedule-approved` / `/pull-analytics` from Claude Code.
 
-In short: Desktop can review/ideate against the vault once the filesystem MCP
-server and web search are connected, but the full pipeline — including
-scheduling — is exercised in Claude Code, where it was verified end-to-end
-(see the [roadmap](#️-project-roadmap)). Menu names and the exact Skills upload
-flow may shift as Anthropic ships Desktop updates — check **Settings →
-Capabilities** for the current wording if a step above doesn't match what you
-see.
+Menu names and the exact Skills upload flow may shift as Anthropic ships
+Desktop updates — check **Settings → Capabilities** for the current wording
+if a step above doesn't match what you see.
+
+---
+
+## 🧭 Connecting to Codex (CLI / IDE)
+
+[OpenAI Codex](https://github.com/openai/codex) doesn't have Claude Code's
+`.claude/skills/` slash-command mechanism, but its CLI supports two things
+this repo can reuse directly: **MCP servers** and a project-level
+**`AGENTS.md`** instructions file.
+
+1. **Point Codex at the same MCP server used for Claude Desktop.** Codex CLI
+   reads MCP server config from `~/.codex/config.toml`:
+   ```toml
+   [mcp_servers.linkedin-vault]
+   command = "node"
+   args = ["/absolute/path/to/LinkedIn_Automation/mcp-server/index.js"]
+   env = { VAULT_ROOT = "/absolute/path/to/LinkedIn_Automation" }
+   ```
+   This is the exact same server described above — it doesn't care which
+   client calls it, so vault file access and real Buffer scheduling/metrics
+   work identically from Codex.
+2. **Give Codex the skill instructions via `AGENTS.md`.** Codex reads an
+   `AGENTS.md` in the project root (and nested ones) as always-on project
+   instructions, instead of Desktop's per-Project custom-instructions box or
+   Claude Code's per-skill `SKILL.md` auto-loading. Two ways to use this:
+   - For scheduling/analytics specifically, copy
+     [`mcp-server/DESKTOP-PROJECT-INSTRUCTIONS.md`](mcp-server/DESKTOP-PROJECT-INSTRUCTIONS.md)
+     into an `AGENTS.md` at the vault root — its rules are Claude-agnostic
+     (they only reference the MCP tool names).
+   - For any other skill (research, drafting, critique, etc.), open the
+     relevant `.claude/skills/<name>/SKILL.md` and paste its body into the
+     Codex chat, or reference it explicitly ("follow the steps in
+     `.claude/skills/write-draft/SKILL.md`") — Codex can read the file
+     directly once it has filesystem access to the repo, it just won't
+     auto-trigger on a bare `/write-draft` the way Claude Code does.
+3. **Run Codex from inside the repo** (`codex` in this directory, or open it
+   as the workspace root in the Codex IDE extension) so its sandboxed
+   file/shell access is scoped to the vault, the same way Claude Code's is.
+
+Codex's own config format and `AGENTS.md` support have changed across
+releases — if `config.toml`'s exact schema doesn't match what's above, check
+`codex --help` / the current [Codex docs](https://github.com/openai/codex)
+for the current MCP-server config syntax. The pipeline itself (skills,
+templates, validation script) was authored against and is verified in Claude
+Code; Codex support here is a same-effort bridge, not a separately-tested
+integration.
 
 ---
 
@@ -564,6 +698,18 @@ Run `python3 scripts/validate_vault.py` to check every note in `Content-Research
 
 Run `python3 scripts/test_validate_vault.py` to unit-test the validator itself (frontmatter parsing, per-field checks, and the multi-spec folder routing) against temp-file fixtures — safe to run anytime, never touches real vault notes.
 
+### Adding or Modifying a Skill
+
+Every skill is a plain Markdown file — no build step, no compiled code:
+
+1. **New skill:** create `.claude/skills/<name>/SKILL.md` with YAML frontmatter (`name`, `description`) followed by the instruction body. The `description` is what Claude Code uses to decide when the skill should trigger, so be specific about *when* to use it, not just *what* it does — copy the phrasing style of an existing skill like [`.claude/skills/write-draft/SKILL.md`](.claude/skills/write-draft/SKILL.md). Claude Code picks it up automatically as a `/name` slash command — no registration step, no restart required.
+2. **Modify an existing skill:** edit its `SKILL.md` directly. If it reads/writes a note schema, check [`_Templates/`](_Templates/) for the matching template and [`REQUIREMENTS.md`](REQUIREMENTS.md) for the section documenting its intended behavior — update both if the schema changes.
+3. **Shared conventions** (voice, hook formulas, humanizer rules, algorithm rules, ICP mapping) live in [`Content-Learnings/`](Content-Learnings/) and are meant to be read by multiple skills — edit the shared file rather than duplicating a rule inside one skill's prompt.
+4. **Validate after schema changes:** run `python3 scripts/validate_vault.py` (and `test_validate_vault.py` if you touched the validator itself).
+5. **Document it:** add a row to the relevant table in the [Multi-Agent Skills Matrix](#-multi-agent-skills-matrix) above and, if it's a new folder under `.claude/skills/`, to the [Repository & Vault Structure](#-repository--vault-structure) tree — this README is the map new contributors (and future-you) use to find things.
+
+See [Contributing](#-contributing) below for the ground rules that apply to any change (anti-hallucination guardrails, gitignored personal content, etc.).
+
 ---
 
 ## 🗺️ Project Roadmap
@@ -582,6 +728,19 @@ Run `python3 scripts/test_validate_vault.py` to unit-test the validator itself (
 - [x] **Phase 12:** Cost & Safety Hardening Audit (`COST-AND-SAFETY.md`)
 - [~] **Phase 13:** Multi-Platform Derivative Content Engine — *X (Twitter) posts/threads and Substack Articles/Notes built 2026-09-14, sharing one research/idea pool with LinkedIn; X's Buffer scheduling and thread-mutation shape not yet exercised against a live account, Substack publishing is manual by design (no API). Carousels and PDF slidedecks still not started.*
 - [ ] **Phase 14:** Automated Cron / Daemon Mode for Headless Research & Queue Monitoring
+- [x] **Phase 15:** Story Bank Interviewer (`interviewer`) — onboarding + focused topic interviews producing reusable Post Spines
+- [x] **Phase 16:** Hook Extractor (`extract-hook`) & shared `hook-formulas.md` taxonomy
+- [x] **Phase 17:** Post Writer rework (`write-draft`) — hook formulas, founders-angle library, Story Bank spine support
+- [x] **Phase 18:** Humanizer (`humanize-draft`) — scored AI-writing-tell rule set & before/after reports
+- [x] **Phase 19:** Post Audit (`audit-draft`) — algorithm-compliance + AI-detection pre-publish gate
+- [x] **Phase 20:** Repurposer (`repurpose-post`) — cross-platform content → native LinkedIn posts
+- [x] **Phase 21:** Content Planner rework (`plan-week`) — calendar view + comment-target suggestions
+- [x] **Phase 22:** Comment Drafter (`draft-comment`)
+- [x] **Phase 23:** Reply Handler (`draft-reply`) — single-comment and whole-thread sweep modes
+- [x] **Phase 24:** Engagement Monitor (`monitor-engagement`) — author-reply checks + ICP-fit grouping
+- [x] **Phase 25:** Plagiarism / Originality Check (`check-plagiarism`) — wired into `audit-draft`
+- [x] **Employee Advocacy module (`plan-advocacy`):** team launch-plan generator with self-reported metrics — the 11th and final skill of this expansion batch (Phases 15–25 + this one)
+- [ ] **MCP bridge maturity:** the [`mcp-server/`](mcp-server/) bridge covers vault access + Buffer scheduling/analytics for Claude Desktop and Codex; it doesn't yet expose the newer engagement/quality skills (audit, humanize, comment/reply drafting) as MCP tools — those still require running from Claude Code or pasting the relevant `SKILL.md` into a Desktop/Codex session.
 
 ---
 
