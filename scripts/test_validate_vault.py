@@ -715,6 +715,181 @@ class ValidateNoteCommentTargetsTests(unittest.TestCase):
             self.assertTrue(any("filename stem" in m for m in messages), messages)
 
 
+ICP_MAP_SPEC = spec_by("icp-map", "Content-Learnings")
+
+
+class ValidateNoteIcpMapTests(unittest.TestCase):
+    """Covers the Phase 24 (Engagement Monitor) icp-map NoteSpec: the
+    sixth registered spec for Content-Learnings/, added alongside
+    story-bank, hook-formulas, humanizer-rules, algorithm-rules, and
+    comment-targets — same single-living-doc shape, no `status` field."""
+
+    def _minimal_icp_map_frontmatter(self, last_updated: str = "2026-09-17") -> str:
+        return (
+            "id: icp-map\n"
+            "type: icp-map\n"
+            "version: 1\n"
+            f"last_updated: {last_updated}\n"
+        )
+
+    def test_valid_icp_map_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "icp-map", self._minimal_icp_map_frontmatter(),
+            )
+            issues = vv.validate_note(path, ICP_MAP_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_last_updated_field_errors(self):
+        fm = self._minimal_icp_map_frontmatter().replace(
+            "last_updated: 2026-09-17\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "icp-map", fm)
+            issues = vv.validate_note(path, ICP_MAP_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("last_updated" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_icp_map_frontmatter().replace(
+            "id: icp-map\n", "id: icp-map-wrong\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "icp-map", fm)
+            issues = vv.validate_note(path, ICP_MAP_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
+ENGAGEMENT_THREAD_SPEC = spec_by("engagement-thread", "Engagement")
+ENGAGEMENT_AUDIENCE_SPEC = spec_by("engagement-audience", "Engagement")
+
+
+class ValidateNoteEngagementThreadTests(unittest.TestCase):
+    """Covers the Phase 24 (Engagement Monitor) engagement-thread NoteSpec
+    (Workflow 1, thread watch) — the first of two specs registered for the
+    new Engagement/ folder, which (like Content-Learnings/) is
+    permissive_folder=True from day one since it holds two types sharing
+    one folder from the start."""
+
+    def _minimal_thread_frontmatter(self, status: str = "watching") -> str:
+        return (
+            "id: example-post--thread\n"
+            "type: engagement-thread\n"
+            'post_url: "https://linkedin.com/posts/example"\n'
+            'my_comment_text: "Great point about X"\n'
+            'my_comment_time: "2026-09-17 09:00"\n'
+            f"status: {status}\n"
+        )
+
+    def test_valid_engagement_thread_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "example-post--thread",
+                self._minimal_thread_frontmatter(),
+            )
+            issues = vv.validate_note(path, ENGAGEMENT_THREAD_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_closed_status_is_valid(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "example-post--thread",
+                self._minimal_thread_frontmatter(status="closed"),
+            )
+            issues = vv.validate_note(path, ENGAGEMENT_THREAD_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_placeholder_status_skips_content_checks(self):
+        fm = self._minimal_thread_frontmatter().replace(
+            'my_comment_time: "2026-09-17 09:00"\n', 'my_comment_time: ""\n'
+        ).replace("status: watching\n", "status: placeholder\n")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "example-post--thread", fm)
+            issues = vv.validate_note(path, ENGAGEMENT_THREAD_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_my_comment_time_errors(self):
+        fm = self._minimal_thread_frontmatter().replace(
+            'my_comment_time: "2026-09-17 09:00"\n', ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "example-post--thread", fm)
+            issues = vv.validate_note(path, ENGAGEMENT_THREAD_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("my_comment_time" in m for m in messages), messages)
+
+    def test_invalid_status_value_errors(self):
+        fm = self._minimal_thread_frontmatter().replace(
+            "status: watching\n", "status: archived\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "example-post--thread", fm)
+            issues = vv.validate_note(path, ENGAGEMENT_THREAD_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("status" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_thread_frontmatter().replace(
+            "id: example-post--thread\n", "id: different-post--thread\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "example-post--thread", fm)
+            issues = vv.validate_note(path, ENGAGEMENT_THREAD_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
+class ValidateNoteEngagementAudienceTests(unittest.TestCase):
+    """Covers the Phase 24 (Engagement Monitor) engagement-audience
+    NoteSpec (Workflow 2, audience pull) — the second of two specs
+    registered for the new Engagement/ folder. No `status` field on this
+    note type, same as story-bank/hook-formulas/etc. — content checks
+    always apply."""
+
+    def _minimal_audience_frontmatter(self, captured_date: str = "2026-09-17") -> str:
+        return (
+            "id: example-post--audience\n"
+            "type: engagement-audience\n"
+            'post_url: "https://linkedin.com/posts/example"\n'
+            f"captured_date: {captured_date}\n"
+        )
+
+    def test_valid_engagement_audience_note_has_no_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "example-post--audience",
+                self._minimal_audience_frontmatter(),
+            )
+            issues = vv.validate_note(path, ENGAGEMENT_AUDIENCE_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_missing_captured_date_errors(self):
+        fm = self._minimal_audience_frontmatter().replace(
+            "captured_date: 2026-09-17\n", ""
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "example-post--audience", fm)
+            issues = vv.validate_note(path, ENGAGEMENT_AUDIENCE_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("captured_date" in m for m in messages), messages)
+
+    def test_id_mismatch_with_filename_errors(self):
+        fm = self._minimal_audience_frontmatter().replace(
+            "id: example-post--audience\n", "id: different-post--audience\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "example-post--audience", fm)
+            issues = vv.validate_note(path, ENGAGEMENT_AUDIENCE_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("filename stem" in m for m in messages), messages)
+
+
 class RouteNoteSpecTests(unittest.TestCase):
     """Covers the multi-spec-per-folder routing added alongside the
     Substack expansion (Drafts/ now holds both `draft` and
@@ -788,13 +963,42 @@ class RouteNoteSpecTests(unittest.TestCase):
         )
         self.assertIs(match, COMMENT_TARGETS_SPEC)
 
+    def test_routes_icp_map_type_to_icp_map_spec(self):
+        match = vv.route_note_spec(
+            {"type": "icp-map"},
+            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
+             ALGORITHM_RULES_SPEC, COMMENT_TARGETS_SPEC, ICP_MAP_SPEC],
+        )
+        self.assertIs(match, ICP_MAP_SPEC)
+
     def test_unmatched_type_in_content_learnings_returns_none(self):
         # playbook.md / voice-guide.md carry `type: playbook` / `type:
         # voice-guide` — neither matches any registered spec.
         match = vv.route_note_spec(
             {"type": "playbook"},
             [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
-             ALGORITHM_RULES_SPEC, COMMENT_TARGETS_SPEC],
+             ALGORITHM_RULES_SPEC, COMMENT_TARGETS_SPEC, ICP_MAP_SPEC],
+        )
+        self.assertIsNone(match)
+
+    def test_routes_engagement_thread_type_to_its_spec(self):
+        match = vv.route_note_spec(
+            {"type": "engagement-thread"},
+            [ENGAGEMENT_THREAD_SPEC, ENGAGEMENT_AUDIENCE_SPEC],
+        )
+        self.assertIs(match, ENGAGEMENT_THREAD_SPEC)
+
+    def test_routes_engagement_audience_type_to_its_spec(self):
+        match = vv.route_note_spec(
+            {"type": "engagement-audience"},
+            [ENGAGEMENT_THREAD_SPEC, ENGAGEMENT_AUDIENCE_SPEC],
+        )
+        self.assertIs(match, ENGAGEMENT_AUDIENCE_SPEC)
+
+    def test_unmatched_type_in_engagement_returns_none(self):
+        match = vv.route_note_spec(
+            {"type": "something-else"},
+            [ENGAGEMENT_THREAD_SPEC, ENGAGEMENT_AUDIENCE_SPEC],
         )
         self.assertIsNone(match)
 
@@ -816,6 +1020,21 @@ class PermissiveFolderTests(unittest.TestCase):
         self.assertTrue(vv.is_permissive_folder(
             [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
              ALGORITHM_RULES_SPEC, COMMENT_TARGETS_SPEC]
+        ))
+
+    def test_content_learnings_specs_are_permissive_with_icp_map(self):
+        self.assertTrue(vv.is_permissive_folder(
+            [STORY_BANK_SPEC, HOOK_FORMULAS_SPEC, HUMANIZER_RULES_SPEC,
+             ALGORITHM_RULES_SPEC, COMMENT_TARGETS_SPEC, ICP_MAP_SPEC]
+        ))
+
+    def test_engagement_specs_are_permissive(self):
+        # Engagement/ is new as of Phase 24, but starts multi-spec from day
+        # one (engagement-thread + engagement-audience) — same reasoning as
+        # Content-Learnings/: each spec must let the other's type pass
+        # through unvalidated.
+        self.assertTrue(vv.is_permissive_folder(
+            [ENGAGEMENT_THREAD_SPEC, ENGAGEMENT_AUDIENCE_SPEC]
         ))
 
     def test_drafts_specs_are_not_permissive(self):
@@ -860,19 +1079,31 @@ class GroupSpecsByFolderTests(unittest.TestCase):
         type_names = {s.type_name for s in by_folder["Published-Posts"]}
         self.assertEqual(type_names, {"post", "substack-ready"})
 
-    def test_content_learnings_folder_has_five_specs(self):
+    def test_content_learnings_folder_has_six_specs(self):
         # Was single-spec through Phase 15; Phase 16 (Hook Extractor) adds
         # hook-formulas alongside story-bank; Phase 18 (Humanizer) adds
         # humanizer-rules alongside both; Phase 19 (Post Audit) adds
         # algorithm-rules alongside all three; Phase 21 (Content Planner)
-        # adds comment-targets alongside all four.
+        # adds comment-targets alongside all four; Phase 24 (Engagement
+        # Monitor) adds icp-map alongside all five.
         by_folder = vv.group_specs_by_folder(vv.SPECS)
-        self.assertEqual(len(by_folder["Content-Learnings"]), 5)
+        self.assertEqual(len(by_folder["Content-Learnings"]), 6)
         type_names = {s.type_name for s in by_folder["Content-Learnings"]}
         self.assertEqual(
             type_names,
             {"story-bank", "hook-formulas", "humanizer-rules",
-             "algorithm-rules", "comment-targets"},
+             "algorithm-rules", "comment-targets", "icp-map"},
+        )
+
+    def test_engagement_folder_has_two_specs(self):
+        # New as of Phase 24 (Engagement Monitor) — starts multi-spec from
+        # day one: engagement-thread (Workflow 1) and engagement-audience
+        # (Workflow 2) share the folder from its creation.
+        by_folder = vv.group_specs_by_folder(vv.SPECS)
+        self.assertEqual(len(by_folder["Engagement"]), 2)
+        type_names = {s.type_name for s in by_folder["Engagement"]}
+        self.assertEqual(
+            type_names, {"engagement-thread", "engagement-audience"},
         )
 
 
