@@ -989,8 +989,8 @@ Schedule pipeline.
 the primary, reliable input; a URL alone is optional metadata and a
 WebFetch attempt on it is best-effort convenience only, never ground truth
 without the user's explicit confirmation. Nothing here adds to or narrows
-§27 — this is one of the three skills (alongside `/extract-hook`, plus
-the not-yet-built Reply Handler and Engagement Monitor) that cross-
+§27 — this is one of the four skills (alongside `/extract-hook`,
+`/draft-reply`, plus the not-yet-built Engagement Monitor) that cross-
 reference it rather than restating it.
 
 **Output is always ephemeral copy-paste text.** No vault artifact is
@@ -1008,3 +1008,43 @@ comment onto a third party's content. Same limitation class as §27's "no
 read API for arbitrary third-party posts" — the output here is always
 handed to the user to paste in manually; this skill never claims to have
 posted anything.
+
+---
+
+## 34. Reply Drafting (Reply Handler)
+
+Added 2026-09-17 (Phase 23). `/draft-reply` drafts replies to comments on
+a LinkedIn post — single-reply mode for one pasted comment, or a sweep
+mode for a full pasted thread export — the same lightweight, mostly
+ephemeral shape as Comment Drafter (§33), not a new stage of the
+Research → Draft → Approve → Schedule pipeline.
+
+**Input** follows §27's shared convention exactly — pasted comment/thread
+text is the primary, reliable input; a post URL alone is optional
+metadata and a WebFetch attempt on it is best-effort convenience only.
+This is the second of the three skills named in §27 (alongside
+`/draft-comment`, plus the not-yet-built Engagement Monitor) that
+cross-reference it rather than restating it.
+
+**2-level-flattening attribution rule.** LinkedIn nests replies only one
+level deep, flattening a reply-to-a-reply into the same top-level-reply
+list with an auto-inserted "@Name" prefix marking its true target. Sweep
+mode parses each top-level comment's replies into `{author, text,
+replied_to}`, inferring `replied_to` from a leading "@Name" mention and
+defaulting to the top-level comment's author when absent. Every drafted
+reply is labeled with its explicit addressee ("Reply to [Author]
+(responding to [X])") so nothing is misattributed when replies are
+copy-pasted back individually.
+
+**Low-value filter (sweep mode only)** — skipped, and reported as skipped
+with a reason, rather than silently dropped: pure emoji/reaction-only
+comments; generic praise with no specific reference to the post; off-topic
+self-promotion/spam; a near-duplicate of a comment already answered
+earlier in the thread; a tag/mention with no added content. Single-reply
+mode always drafts what's asked — the filter never applies there.
+
+**Output is always ephemeral copy-paste text.** No vault artifact is
+created — no Draft Note, no `Drafts/` entry, no approval-pipeline
+lifecycle (§8), same class of limitation as §33: no comment/reply-posting
+API exists anywhere in this repo, so output always goes to the user to
+paste in manually.
