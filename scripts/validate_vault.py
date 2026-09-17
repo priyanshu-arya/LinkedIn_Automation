@@ -316,6 +316,23 @@ SPECS = [
         category_key=None,
         permissive_folder=True,
     ),
+    # Added Phase 19 (Post Audit). Same single-living-doc shape as
+    # story-bank.md/hook-formulas.md/humanizer-rules.md above — see
+    # Content-Learnings/algorithm-rules.md's own header. This is the fourth
+    # registered spec for Content-Learnings/; permissive_folder=True for the
+    # same reason as the three entries above (playbook.md/voice-guide.md and
+    # friends must stay silently unvalidated, not start erroring, once the
+    # folder has more than one spec).
+    NoteSpec(
+        "algorithm-rules", "Content-Learnings", False,
+        required_keys=["id", "type", "version", "last_updated"],
+        nonempty_scalar_keys=["id", "type", "version", "last_updated"],
+        nonempty_list_keys=[],
+        status_key=None,
+        status_enum=None,
+        category_key=None,
+        permissive_folder=True,
+    ),
 ]
 
 

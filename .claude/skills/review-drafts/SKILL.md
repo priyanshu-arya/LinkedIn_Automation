@@ -29,9 +29,15 @@ content in whatever shape that note's `type` actually is:
 Then, for either shape: viral_score and its factor breakdown (from
 `## Critic Notes`), linked visual brief(s) if any, and the assigned target
 date (`target_date` for a LinkedIn idea, or the matching
-`platform_schedule` entry for any other platform). Then ask which action to
-take, using these exact seven options (present via AskUserQuestion when
-interactive):
+`platform_schedule` entry for any other platform). If a `## Post Audit
+Notes` section is present (written by `/audit-draft`, Phase 19 — an
+optional, annotation-only step that may or may not have run on a given
+note), show it alongside: the algorithm-mechanics findings with their
+confidence tiers and the Humanizer score report/caveats it carries. It's
+informational only — it never changes what actions are available below,
+and its absence just means `/audit-draft` hasn't been run on this note
+yet. Then ask which action to take, using these exact seven options
+(present via AskUserQuestion when interactive):
 
 - **Approve** — `status: in_review → approved`. Append
   `{action: approved, date, note}` to history. No other field changes.
