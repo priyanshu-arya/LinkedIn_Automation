@@ -332,6 +332,139 @@ class ValidateNoteDraftPhase17Tests(unittest.TestCase):
                 self.assertEqual(errors, [], f"goal={goal!r} unexpected errors: {errors}")
 
 
+class ValidateNoteDraftPhase20Tests(unittest.TestCase):
+    """Covers the Phase 20 (Repurposer) Draft Note additions: the two new
+    optional frontmatter fields (source_type, source_link). Same
+    backward-compatible pattern as Phase 17's four fields above — every
+    draft written before Phase 20, which has neither key at all, must keep
+    validating unchanged."""
+
+    def _minimal_draft_frontmatter(self, extra: str = "") -> str:
+        return (
+            "id: 2026-01-01--example\n"
+            "type: draft\n"
+            'idea_id: "2026-01-01--idea"\n'
+            "platform: linkedin\n"
+            "category: AI\n"
+            "format: ai-tech\n"
+            "hook_style: test\n"
+            f"{extra}"
+            'hashtags: ["#AI"]\n'
+            "visual_ids: []\n"
+            "sources:\n"
+            "  - 2026-01-01--research\n"
+            "viral_score: 7.0\n"
+            "status: in_review\n"
+            "history:\n"
+            "  - action: created\n"
+        )
+
+    def test_pre_phase20_draft_with_no_new_fields_is_still_valid(self):
+        # No source_type/source_link keys at all — exactly what every draft
+        # written before this phase (including Phase 17 drafts) looks like.
+        # Must not error.
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example", self._minimal_draft_frontmatter(),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_new_fields_present_but_empty_is_valid(self):
+        extra = (
+            'source_type: ""\n'
+            'source_link: ""\n'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(extra),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_new_fields_present_with_valid_values_is_valid(self):
+        extra = (
+            "source_type: tweet\n"
+            'source_link: "https://x.com/example/status/1"\n'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(extra),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_invalid_source_type_errors(self):
+        extra = "source_type: podcast\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(
+                Path(tmp), "2026-01-01--example",
+                self._minimal_draft_frontmatter(extra),
+            )
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("source_type" in m for m in messages), messages)
+
+    def test_each_closed_list_source_type_value_is_valid(self):
+        for src_type in sorted(vv.SOURCE_TYPES):
+            with tempfile.TemporaryDirectory() as tmp:
+                path = write_note(
+                    Path(tmp), "2026-01-01--example",
+                    self._minimal_draft_frontmatter(f"source_type: {src_type}\n"),
+                )
+                issues = vv.validate_note(path, DRAFT_SPEC)
+                errors = [i for i in issues if i.level == "ERROR"]
+                self.assertEqual(errors, [], f"source_type={src_type!r} unexpected errors: {errors}")
+
+    def test_repurposed_draft_with_no_idea_id_or_spine_id_is_valid(self):
+        # A /repurpose-post draft has neither an Idea Note nor a Story Bank
+        # Post Spine behind it — its grounding is the source content itself,
+        # recorded via source_type/source_link. This must NOT trip the
+        # exactly_one_of(idea_id, spine_id) "neither is set" check.
+        fm = (
+            "id: 2026-01-01--example\n"
+            "type: draft\n"
+            'idea_id: ""\n'
+            "platform: linkedin\n"
+            "category: AI\n"
+            "format: ai-tech\n"
+            "hook_style: test\n"
+            "source_type: tweet\n"
+            'source_link: "https://x.com/example/status/1"\n'
+            'hashtags: ["#AI"]\n'
+            "visual_ids: []\n"
+            "sources:\n"
+            '  - "https://x.com/example/status/1"\n'
+            "viral_score: 0\n"
+            "status: draft\n"
+            "history:\n"
+            "  - action: created\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_note(Path(tmp), "2026-01-01--example", fm)
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            errors = [i for i in issues if i.level == "ERROR"]
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+
+    def test_no_idea_id_spine_id_or_source_type_still_errors(self):
+        # Regression guard: a plain, non-repurposed draft still needs
+        # exactly one of idea_id/spine_id — an empty source_type must not
+        # silently exempt it.
+        with tempfile.TemporaryDirectory() as tmp:
+            fm = self._minimal_draft_frontmatter().replace(
+                'idea_id: "2026-01-01--idea"\n', 'idea_id: ""\n'
+            )
+            path = write_note(Path(tmp), "2026-01-01--example", fm)
+            issues = vv.validate_note(path, DRAFT_SPEC)
+            messages = [i.message for i in issues if i.level == "ERROR"]
+            self.assertTrue(any("Neither" in m for m in messages), messages)
+
+
 STORY_BANK_SPEC = spec_by("story-bank", "Content-Learnings")
 HOOK_FORMULAS_SPEC = spec_by("hook-formulas", "Content-Learnings")
 

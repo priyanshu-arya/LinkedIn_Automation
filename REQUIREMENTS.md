@@ -791,3 +791,93 @@ more.
 adapted (not copied verbatim) from the MIT-licensed
 `sergebulaev/linkedin-skills` project — see that file's own header for the
 full attribution.*
+
+---
+
+## 31. Repurposing (Cross-Platform → LinkedIn)
+
+Added 2026-09-17 (Phase 20). `/repurpose-post` (Repurposer) is the first
+skill in this repo that goes the direction every existing multi-platform
+skill doesn't: **other platform's content → LinkedIn**, rather than
+LinkedIn-pipeline idea → another platform (§25's `write-draft-x`,
+`write-draft-substack-article`/`-note` all go outward from this system's own
+idea pool). It turns a tweet/thread, YouTube video, blog post, or newsletter
+into a native LinkedIn post, writing a normal `status: draft` Draft Note
+that flows through the exact same `/critique-draft` → `/audit-draft` →
+`/review-drafts` → `/schedule-approved` pipeline as any other draft — this
+skill adds a new *input* path, never a new approval path.
+
+**Source types and input handling.** Four source types, each with its own
+judgment call layered on top of §27's shared "reading third-party post
+content" convention (pasted text is primary and reliable; a URL is
+best-effort metadata only; no skill in this repo scrapes or bypasses
+login/ToS) — Repurposer cross-references §27 rather than restating it:
+- **Tweet/thread:** pasted text is primary, per §27. A URL may be attempted
+  via WebFetch as a best-effort convenience, but X/Twitter typically
+  requires login for full content server-side, so any fetch result is
+  treated as unverified — the user must confirm it matches what they
+  actually see, or paste the text directly, before it's used.
+- **YouTube video:** a **mandatory manual-paste case**, permanently. No
+  transcript-fetching capability exists anywhere in this repo, and
+  WebFetch on a YouTube URL returns only the page shell, never the
+  transcript. Repurposer always asks for a pasted transcript excerpt or
+  written summary of the key point(s), and never claims to have "watched"
+  or reliably retrieved a video's content.
+- **Blog/newsletter:** WebFetch is genuinely plausible (ordinary HTML
+  renders fine) and is attempted as the primary path, falling back to a
+  pasted-text request only if the fetch fails or returns unusable content
+  (paywall, JS-rendered body, mostly boilerplate).
+
+If no usable source content is obtained through any of the above, the skill
+stops and asks for a manual paste rather than proceeding on a guess — the
+same never-fabricate discipline as everywhere else in this spec (§21).
+
+**Re-hook and expansion, citing §30's real thresholds (not new numbers).**
+The source's own opening line was written for a different platform's
+fold/audience assumptions, so Repurposer writes a genuinely new first 1-2
+sentences against the **210-character (desktop) / 140-character (mobile)
+hook-truncation cutoffs** (§30, Verified Numeric Threshold) — a rewrite of
+the opening, not a trim of the source's. The body is then expanded into
+the **900–1,300 character length sweet spot** (§30, Verified Numeric
+Threshold) via framing/elaboration only: a concrete example or analogy
+consistent with the source, unpacking an implication the source stated
+tersely, or adding the personal-take framing LinkedIn favors. Expansion
+never introduces a new factual claim, statistic, or quote beyond what the
+source actually said.
+
+**Links move to a first comment, never the body.** Per §30's documented
+40-60% external-link-in-body reach-suppression threshold (Verified Numeric
+Threshold — the same one `/audit-draft` flags an in-body link against), any
+link worth preserving from the source is stored in the Draft Note's new
+`source_link` field instead of the post body. Posting it as the actual
+first LinkedIn comment is a **manual step** the user performs after the
+post itself goes live — this repo has no mechanism to auto-post a follow-up
+comment, the same deliberate-manual precedent as visuals (§7) and Substack
+publishing (§25.3).
+
+**Mandatory Humanizer pass.** Before finalizing, Repurposer calls
+`/humanize-draft`'s documented Input/Output Contract (§29;
+`.claude/skills/humanize-draft/SKILL.md`) with `text` = the drafted body and
+`platform: linkedin`, and uses the returned `revised_text` as the final
+copy — it does not re-implement any of Humanizer's own pattern-matching
+logic, and surfaces the returned `caveats` string verbatim in its report,
+the same delegation discipline `/audit-draft` already applies to the same
+contract.
+
+**Dedup check against `content-index.md`.** Before finalizing, Repurposer
+checks `Content-Learnings/content-index.md` for topic/hook/argument overlap
+with existing drafts or published posts — the same duplicate/fatigue
+discipline `/write-draft`'s pipeline and `/generate-ideas` already apply
+(§15/§25.4) — and flags rather than silently drafts a near-duplicate
+repurposed angle.
+
+**Draft Note schema.** `_Templates/Draft-Note.md` gains two more optional
+frontmatter fields, all empty-string by default so every previously written
+draft keeps validating unchanged: `source_type` (tweet | thread | youtube |
+blog | newsletter | none) and `source_link` (the URL to post as a first
+comment, blank if none).
+
+**Never auto-publishes.** Output is always `status: draft`, entering the
+existing approval pipeline unchanged — this skill never marks anything
+`approved`, `scheduled`, or `published`, and never auto-posts the first
+comment itself.
