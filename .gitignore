@@ -1,6 +1,7 @@
 # Secrets — never commit real API tokens/keys
 .env
 .env.*
+!.env.example
 .secrets/
 config/secrets.*
 *.token

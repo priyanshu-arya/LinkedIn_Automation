@@ -17,6 +17,7 @@
 
 ## 📑 Table of Contents
 
+- [🎬 Demo](#-demo)
 - [⚡ System Architecture](#-system-architecture)
 - [✨ Core Capabilities](#-core-capabilities)
 - [🛡️ Quality, Safety & Anti-Hallucination Guardrails](#️-quality-safety--anti-hallucination-guardrails)
@@ -33,6 +34,26 @@
 - [🗺️ Project Roadmap](#️-project-roadmap)
 - [🤝 Contributing](#-contributing)
 - [📄 License & Authors](#-license--authors)
+
+---
+
+## 🎬 Demo
+
+> **Video not recorded yet.** A complete, ready-to-record shot list and
+> narration script lives at
+> [`Documentation/Demo-Script.md`](Documentation/Demo-Script.md) — it walks
+> through a real research → draft → critique → visual → human-approval run,
+> deliberately stopping before the one step that makes a live external call
+> (`/schedule-approved`). Once recorded, replace this block with the actual
+> embed:
+>
+> ```markdown
+> https://github.com/priyanshu-arya/LinkedIn_Automation/assets/<id>/<file>.mp4
+> ```
+>
+> (uploading the file to a GitHub issue/PR comment on this repo gives you
+> that stable asset URL — see the script's "After recording" section for the
+> full option list, including a GIF cut and external hosting.)
 
 ---
 
@@ -107,6 +128,12 @@ flowchart TD
 
 ```text
 LinkedIn_Automation/
+├── CLAUDE.md                         # Auto-loaded Claude Code project instructions —
+│                                      #   makes following Documentation/Workflows/ mandatory
+├── AGENTS.md                         # Same rules, mirrored for Codex CLI/IDE auto-loading
+├── Documentation/
+│   └── Workflows/                    # Full execution-order documentation, one file per
+│                                      #   feature — start at 00-Overview.md
 ├── .claude/
 │   └── skills/                       # Executable Multi-Agent Skills
 │       ├── research-topic/           # Trend discovery & deep verification (shared, all platforms)
@@ -417,15 +444,24 @@ cd LinkedIn_Automation
 ```
 
 ### 2. Environment Configuration
-Create a `.env` file in the root directory:
+Copy [`.env.example`](.env.example) to `.env` and fill in real values:
+```bash
+cp .env.example .env
+```
+
 ```env
 # Buffer GraphQL API Credentials
 BUFFER_ACCESS_TOKEN=your_buffer_access_token_here
 BUFFER_CHANNEL_ID=your_linkedin_channel_id_here
 
+# Optional — only needed for the X (Twitter) pipeline
+BUFFER_CHANNEL_ID_X=your_x_channel_id_here
+
 # Optional: Push Notification webhooks
 NOTIFICATION_WEBHOOK_URL=https://your-webhook-endpoint.com
 ```
+
+`.env` is gitignored — never commit real credentials.
 
 > **How to obtain Buffer credentials:**
 > 1. Head to [Buffer Developer Portal](https://buffer.com/developers).
@@ -434,6 +470,10 @@ NOTIFICATION_WEBHOOK_URL=https://your-webhook-endpoint.com
 
 ### 3. Open in Obsidian (Optional but Recommended)
 Open the `LinkedIn_Automation` directory as an Obsidian Vault to enjoy graphical relationship visualizers, backlink panels, and Kanban-style pipeline tracking.
+
+### 4. Project instructions are already wired in — nothing to configure
+
+[`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md) sit at the repo root and are auto-loaded as project instructions the moment you open this folder in Claude Code or Codex — no setup step, no copy-paste. Both make one rule mandatory: for any task, read [`Documentation/Workflows/00-Overview.md`](Documentation/Workflows/00-Overview.md) first, find the matching feature document, and follow its documented stage order and skills rather than improvising. This is what makes the system behave the same way for anyone who clones this repo, regardless of which client they connect with — see [Connecting to Claude Desktop](#️-connecting-to-claude-desktop) and [Connecting to Codex](#-connecting-to-codex-cli--ide) below for the remaining per-client setup (MCP server registration, Buffer credentials).
 
 ---
 
@@ -537,20 +577,23 @@ this repo can reuse directly: **MCP servers** and a project-level
    This is the exact same server described above — it doesn't care which
    client calls it, so vault file access and real Buffer scheduling/metrics
    work identically from Codex.
-2. **Give Codex the skill instructions via `AGENTS.md`.** Codex reads an
-   `AGENTS.md` in the project root (and nested ones) as always-on project
-   instructions, instead of Desktop's per-Project custom-instructions box or
-   Claude Code's per-skill `SKILL.md` auto-loading. Two ways to use this:
-   - For scheduling/analytics specifically, copy
-     [`mcp-server/DESKTOP-PROJECT-INSTRUCTIONS.md`](mcp-server/DESKTOP-PROJECT-INSTRUCTIONS.md)
-     into an `AGENTS.md` at the vault root — its rules are Claude-agnostic
-     (they only reference the MCP tool names).
-   - For any other skill (research, drafting, critique, etc.), open the
-     relevant `.claude/skills/<name>/SKILL.md` and paste its body into the
-     Codex chat, or reference it explicitly ("follow the steps in
-     `.claude/skills/write-draft/SKILL.md`") — Codex can read the file
-     directly once it has filesystem access to the repo, it just won't
+2. **Nothing to configure for skill instructions — [`AGENTS.md`](AGENTS.md)
+   already ships at the repo root.** Codex reads it automatically as
+   always-on project instructions (the same mechanism Desktop's per-Project
+   custom-instructions box and Claude Code's `CLAUDE.md` serve). It makes one
+   rule mandatory: for any task, read
+   [`Documentation/Workflows/00-Overview.md`](Documentation/Workflows/00-Overview.md)
+   first, find the matching feature document, and follow its documented
+   stage order rather than improvising. It also tells Codex explicitly:
+   - When a workflow stage calls for a skill, open the relevant
+     `.claude/skills/<name>/SKILL.md` directly and follow it — Codex can
+     read the file once it has filesystem access to the repo, it just won't
      auto-trigger on a bare `/write-draft` the way Claude Code does.
+   - If this session only has the `linkedin-vault` MCP tools (no direct
+     skill file access), follow
+     [`mcp-server/DESKTOP-PROJECT-INSTRUCTIONS.md`](mcp-server/DESKTOP-PROJECT-INSTRUCTIONS.md)
+     for the scheduling/analytics tool-call rules instead — it's already
+     Claude-agnostic, no copying needed.
 3. **Run Codex from inside the repo** (`codex` in this directory, or open it
    as the workspace root in the Codex IDE extension) so its sandboxed
    file/shell access is scoped to the vault, the same way Claude Code's is.
